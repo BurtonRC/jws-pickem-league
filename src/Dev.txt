@@ -1,0 +1,91 @@
+
+
+I want to build an app that creates members and has a login. The app is for a nfl pick'em league tracking members weekly picks and tallys scores for the whole season.
+
+Responsive Web App
+
+Core Features
+1. User Accounts
+Sign up / Login / Logout
+
+Password hashing (e.g., bcrypt)
+
+Optional: Email verification or admin-only registration
+
+2. NFL Schedule & Picks
+Weekly schedule of games (can pull from an API or hardcode each week)
+
+Each user submits picks per game (winner selection)
+
+3. Scoring System
+Compare user picks to actual results
+
+Tally weekly and cumulative scores
+
+Leaderboard
+
+4. Admin Panel (optional)
+Manage users
+
+Manually enter game results (if not using an API)
+
+Lock picks at kickoff time
+
+
+
+Tech Stack Suggestions
+
+?? Backend
+Language/Framework: Node.js + Express or Python + Django/FastAPI
+
+Database: PostgreSQL / MySQL / MongoDB
+
+Auth: JWT or session-based auth
+
+?? Frontend
+Framework: React / Vue / Svelte / Next.js
+
+Styling: Tailwind CSS / Bootstrap
+
+?? Other Tools
+API for NFL data: TheSportsDB or MySportsFeeds (some are paid)
+
+Hosting: Vercel/Netlify (frontend), Heroku/Render/Fly.io (backend)
+
+
+Project Timeline (High-Level)
+
+Week	Goal
+1	Setup backend, user registration/login
+2	Create basic frontend, integrate login
+3	Implement weekly pick UI and game model
+4	Scoring logic, admin control of game results
+5	Leaderboard, lock picks, polish UI
+6	Test, deploy, invite users to join league
+
+
+MVP Features
+
+Register/login/logout
+
+View weekly games
+
+Submit weekly picks (before kickoff)
+
+Auto-calculate scores
+
+Leaderboard
+
+
+
+? Future Ideas
+
+Confidence points
+
+Tie-breaker games (e.g. total score of MNF)
+
+User comments
+
+Mobile app with React Native or Flutter
+
+Notifications (email/text reminders)

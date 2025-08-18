@@ -1,0 +1,227 @@
+{
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "startDate": "2025-08-05",
+      "endDate": "2025-08-10",
+      "kickoffUTC": "2025-08-10T16:09:00Z",
+      "games": [
+        {
+          "id": 1,
+          "teams": ["Dallas(db)", "Philadelphia"],
+          "day": "Friday",
+          "dbLabel": "Dallas",
+	        "dbTeam": "Dallas(db)",
+          "pointSpread": ["Minnesota Covers +3.5", "Detroit Cover -3.5"]
+        },
+        {
+          "id": 2,
+          "teams": ["Kansas City", "LA Chargers"],
+          "day": "Saturday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 3,
+          "teams": ["Tampa Bay", "Atlanta"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 4,
+          "teams": ["Cincinnati", "Cleveland"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 5,
+          "teams": ["Miami", "Indianapolis"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 6,
+          "teams": ["Carolina", "Jacksonville"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 7,
+          "teams": ["Las Vegas", "New England"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 8,
+          "teams": ["Arizona", "New Orleans"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 9,
+          "teams": ["Pittsburgh", "NY Jets"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 10,
+          "teams": ["NY Giants", "Washington"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 11,
+          "teams": ["Tennessee", "Denver"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 12,
+          "teams": ["San Francisco", "Seattle"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 13,
+          "teams": ["Detroit", "Green Bay"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 14,
+          "teams": ["Houston", "LA Rams"],
+          "day": "Sunday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+	{
+          "id": 15,
+          "teams": ["Baltimore", "Buffalo"],
+          "day": "Monday",
+          "dbLabel": null,
+          "pointSpread": []
+        },
+{
+          "id": 16,
+          "teams": ["Minnesota", "Chicago"],
+          "day": "Tuesday",
+          "dbLabel": null,
+          "pointSpread": []
+        }
+      ]
+    },
+    {
+      "weekNumber": 2,
+      "startDate": "2025-09-12",
+      "endDate": "2025-09-16",
+      "games": []
+    },
+    {
+      "weekNumber": 3,
+      "startDate": "2025-09-19",
+      "endDate": "2025-09-23",
+      "games": []
+    },
+    {
+      "weekNumber": 4,
+      "startDate": "2025-09-26",
+      "endDate": "2025-09-30",
+      "games": []
+    },
+    {
+      "weekNumber": 5,
+      "startDate": "2025-10-03",
+      "endDate": "2025-10-07",
+      "games": []
+    },
+    {
+      "weekNumber": 6,
+      "startDate": "2025-10-10",
+      "endDate": "2025-10-14",
+      "games": []
+    },
+    {
+      "weekNumber": 7,
+      "startDate": "2025-10-17",
+      "endDate": "2025-10-21",
+      "games": []
+    },
+    {
+      "weekNumber": 8,
+      "startDate": "2025-10-24",
+      "endDate": "2025-10-28",
+      "games": []
+    },
+    {
+      "weekNumber": 9,
+      "startDate": "2025-10-31",
+      "endDate": "2025-11-04",
+      "games": []
+    },
+    {
+      "weekNumber": 10,
+      "startDate": "2025-11-07",
+      "endDate": "2025-11-11",
+      "games": []
+    },
+    {
+      "weekNumber": 11,
+      "startDate": "2025-11-14",
+      "endDate": "2025-11-18",
+      "games": []
+    },
+    {
+      "weekNumber": 12,
+      "startDate": "2025-11-21",
+      "endDate": "2025-11-25",
+      "games": []
+    },
+    {
+      "weekNumber": 13,
+      "startDate": "2025-11-27",
+      "endDate": "2025-12-02",
+      "games": []
+    },
+    {
+      "weekNumber": 14,
+      "startDate": "2025-12-05",
+      "endDate": "2025-12-09",
+      "games": []
+    },
+    {
+      "weekNumber": 15,
+      "startDate": "2025-12-12",
+      "endDate": "2025-12-16",
+      "games": []
+    },
+    {
+      "weekNumber": 16,
+      "startDate": "2025-12-19",
+      "endDate": "2025-12-23",
+      "games": []
+    },
+    {
+      "weekNumber": 17,
+      "startDate": "2025-12-25",
+      "endDate": "2025-12-30",
+      "games": []
+    },
+    {
+      "weekNumber": 18,
+      "startDate": "TBD",
+      "endDate": "TBD",
+      "games": []
+    }
+  ]
+}

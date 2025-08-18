@@ -1,0 +1,17 @@
+{
+  "username1": {
+    "status": "active",
+    "usedTeams": ["Chiefs", "Bills"],
+    "picks": {
+      "1": "Chiefs",
+      "2": "Bills"
+    }
+  },
+  "username2": {
+    "status": "eliminated",
+    "usedTeams": ["Packers"],
+    "picks": {
+      "1": "Packers"
+    }
+  }
+}
