@@ -93,13 +93,14 @@ export default function SurvivorPage() {
                     <td key={weekNum} className="p-2 text-center">
                       {logo ? (
                         <img
-                          src={logo}
+                          src={`${import.meta.env.BASE_URL}${logo}`}
                           alt={team}
                           className="w-12 h-12 mx-auto"
                         />
                       ) : (
                         team || ""
                       )}
+
                     </td>
                   );
                 })}

@@ -1,6 +1,6 @@
 // src/App.jsx
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
 import Navbar from './components/Navbar';
@@ -17,12 +17,10 @@ export default function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
 
-    // listen for session changes
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -41,12 +39,9 @@ export default function App() {
   };
 
   return (
-    <>
-      {/* Navbar is fixed; keep it as-is */}
+    <Router basename="/jws-pickem-league"> {/* <-- add this line */}
       <Navbar loggedIn={!!user} onLogout={handleLogout} />
-
-      {/* Ensure content starts below the fixed navbar. Adjust pt value if your navbar height differs */}
-      <div className="pt-28"> 
+      <div className="pt-28">
         <div className="max-w-6xl mx-auto px-4">
           <Routes>
             <Route path="/home" element={user ? <HomePage /> : <Navigate to="/login" />} />
@@ -60,6 +55,6 @@ export default function App() {
           </Routes>
         </div>
       </div>
-    </>
+    </Router>
   );
 }
