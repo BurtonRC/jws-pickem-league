@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import logo from "../assets/pickem_logo.png"; // ← import the logo
+import logo from "/images/pickem_logo.png"; // ← import the logo
 
 export default function HomePage() {
   const [report, setReport] = useState(null);

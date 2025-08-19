@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
-import teamLogos from "../data/teamLogos.json"; // must be valid JSON
 
 export default function SurvivorPage() {
   const mockSurvivorData = {
@@ -11,7 +10,16 @@ export default function SurvivorPage() {
 
   const [survivorData, setSurvivorData] = useState({});
   const [maxWeek, setMaxWeek] = useState(1);
+  const [teamLogos, setTeamLogos] = useState({});
   const [useMock, setUseMock] = useState(true); // toggle for testing
+
+  // ✅ Load team logos from public/teamLogos.json
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}teamLogos.json`)
+      .then((res) => res.json())
+      .then((data) => setTeamLogos(data))
+      .catch((err) => console.error("Error loading team logos:", err));
+  }, []);
 
   useEffect(() => {
     if (useMock) {
@@ -60,46 +68,46 @@ export default function SurvivorPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="w-full md:w-[90%] max-w-5xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Survivor Picks</h1>
+        <h1 className="text-2xl font-bold mb-4">Survivor Picks</h1>
 
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-2 text-center">User</th>
-            {Array.from({ length: maxWeek }, (_, i) => (
-              <th key={i + 1} className="p-2 text-center">
-                Week {i + 1}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(survivorData).map(([user, picks]) => (
-            <tr key={user} className="border-b border-gray-300">
-              <td className="p-2 font-semibold text-center">{user}</td>
-              {Array.from({ length: maxWeek }, (_, i) => {
-                const weekNum = i + 1;
-                const team = picks[weekNum];
-                const logo = team ? teamLogos[team] : null;
-                return (
-                  <td key={weekNum} className="p-2 text-center">
-                    {logo ? (
-                      <img
-                        src={logo}
-                        alt={team}
-                        className="w-12 h-12 mx-auto"
-                      />
-                    ) : (
-                      ""
-                    )}
-                  </td>
-                );
-              })}
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-2 text-center">User</th>
+              {Array.from({ length: maxWeek }, (_, i) => (
+                <th key={i + 1} className="p-2 text-center">
+                  Week {i + 1}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {Object.entries(survivorData).map(([user, picks]) => (
+              <tr key={user} className="border-b border-gray-300">
+                <td className="p-2 font-semibold text-center">{user}</td>
+                {Array.from({ length: maxWeek }, (_, i) => {
+                  const weekNum = i + 1;
+                  const team = picks[weekNum];
+                  const logo = team ? teamLogos[team] : null;
+                  return (
+                    <td key={weekNum} className="p-2 text-center">
+                      {logo ? (
+                        <img
+                          src={logo}
+                          alt={team}
+                          className="w-12 h-12 mx-auto"
+                        />
+                      ) : (
+                        team || ""
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>  
   );
 }
