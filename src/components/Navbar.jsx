@@ -6,6 +6,9 @@ export default function Navbar({ loggedIn, onLogout }) {
 
   const hoverColorClass = "hover:text-[#b1945a]";
 
+  // Use BASE_URL so it works locally and on GitHub Pages
+  const logoPath = import.meta.env.BASE_URL + 'images/pickem-logo.png';
+
   return (
     <nav className="fixed top-0 left-0 w-full bg-gray-900 text-white shadow-md z-50">
       <div className="max-w-6xl mx-auto flex justify-between items-center p-4">
@@ -14,7 +17,7 @@ export default function Navbar({ loggedIn, onLogout }) {
         <div className="flex items-center space-x-4">
           <Link to="/home">
             <img
-              src={`${import.meta.env.BASE_URL}images/pickem-logo.png`}
+              src={logoPath}
               alt="JWs PickEm League Logo"
               className="h-20"
             />
