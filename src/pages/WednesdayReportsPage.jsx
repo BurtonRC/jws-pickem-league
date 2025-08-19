@@ -59,15 +59,21 @@ export default function WednesdayReportsPage() {
     const selectedReport = reportMap[keyToShow];
 
     if (selectedReport) {
-      const processedContent = selectedReport.content.replace(
-        /<img[^>]*>/g,
-        `<img src="${logoPath}" alt="JW Pickem Logo" class="mx-auto my-4 w-32" />`
-      );
+      const processedContent = selectedReport.content
+        // remove any leftover <link ... .css>
+        .replace(/<link[^>]+\.css[^>]*>/gi, "")
+        // replace old <img> tags with your new logo
+        .replace(
+          /<img[^>]*>/g,
+          `<img src="/images/pickem-logo.png" alt="JW Pickem Logo" class="mx-auto my-4 w-32" />`
+        );
+
       setReportToShow({ ...selectedReport, processedContent });
     } else {
       setReportToShow(null);
     }
   }, [year, week, reports]);
+
 
   const years = [...new Set(reports.map((r) => new Date(r.report_date).getFullYear()))].sort();
   const weeks = [...new Set(reports.map((r) => r.week))].sort((a, b) => a - b);
