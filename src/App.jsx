@@ -1,6 +1,5 @@
-// src/App.jsx
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
 import Navbar from './components/Navbar';
@@ -39,7 +38,7 @@ export default function App() {
   };
 
   return (
-    <Router basename="/jws-pickem-league"> {/* <-- add this line */}
+    <>
       <Navbar loggedIn={!!user} onLogout={handleLogout} />
       <div className="pt-28">
         <div className="max-w-6xl mx-auto px-4">
@@ -55,6 +54,6 @@ export default function App() {
           </Routes>
         </div>
       </div>
-    </Router>
+    </>
   );
 }
