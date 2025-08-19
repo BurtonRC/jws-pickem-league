@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import logo from "/images/pickem_logo.png"; // ← import the logo
 
 export default function HomePage() {
   const [report, setReport] = useState(null);
@@ -18,11 +17,14 @@ export default function HomePage() {
 
       if (error) setError("Failed to load Wednesday Report");
       else {
-        // Replace any <img> tags in the report content with the imported logo
+        const logoPath = `${import.meta.env.BASE_URL}images/pickem-logo.png`;
+
+        // Replace any <img> tags in the report content with the correct logo path
         const processedContent = data.content.replace(
           /<img[^>]*>/g,
-          `<img src="${logo}" alt="JW Pickem Logo" class="mx-auto my-4 w-32" />`
+          `<img src="${logoPath}" alt="JW Pickem Logo" class="mx-auto my-4 w-32" />`
         );
+
         setReport({ ...data, content: processedContent });
       }
     };

@@ -14,8 +14,8 @@ export default function Navbar({ loggedIn, onLogout }) {
         <div className="flex items-center space-x-4">
           <Link to="/home">
             <img
-              src="src/assets/pickem_logo.png"
-              alt="Site Logo"
+              src={`${import.meta.env.BASE_URL}images/pickem-logo.png`}
+              alt="JWs PickEm League Logo"
               className="h-20"
             />
           </Link>

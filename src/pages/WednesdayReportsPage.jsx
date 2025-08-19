@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import logo from '../assets/pickem_logo.png';
 
 const supabaseUrl = 'https://pliswiceskoebzcxbgwt.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsaXN3aWNlc2tvZWJ6Y3hiZ3d0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MTkwNTIsImV4cCI6MjA3MDQ5NTA1Mn0.2Bl-0aRiSP5zdsuqCE6z5ER_KjUcOhFPJQY_t-XGawc';
@@ -11,6 +10,9 @@ export default function WednesdayReportsPage() {
   const [reportToShow, setReportToShow] = useState(null);
   const [year, setYear] = useState('');
   const [week, setWeek] = useState('');
+
+  // Base path for images works in dev and prod
+  const logoPath = import.meta.env.BASE_URL + 'images/pickem-logo.png';
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -59,7 +61,7 @@ export default function WednesdayReportsPage() {
     if (selectedReport) {
       const processedContent = selectedReport.content.replace(
         /<img[^>]*>/g,
-        `<img src="${logo}" alt="JW Pickem Logo" class="mx-auto my-4 w-32" />`
+        `<img src="${logoPath}" alt="JW Pickem Logo" class="mx-auto my-4 w-32" />`
       );
       setReportToShow({ ...selectedReport, processedContent });
     } else {
@@ -83,9 +85,7 @@ export default function WednesdayReportsPage() {
         >
           <option value="">All Years</option>
           {years.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
+            <option key={y} value={y}>{y}</option>
           ))}
         </select>
 
@@ -96,9 +96,7 @@ export default function WednesdayReportsPage() {
         >
           <option value="">All Weeks</option>
           {weeks.map((w) => (
-            <option key={w} value={w}>
-              Week {w}
-            </option>
+            <option key={w} value={w}>Week {w}</option>
           ))}
         </select>
       </div>
@@ -106,11 +104,9 @@ export default function WednesdayReportsPage() {
       {/* Welcome Page */}
       {!year && !week && (
         <div className="text-center max-w-2xl">
-          <img src={logo} alt="JW Pickem Logo" className="mx-auto w-32 mb-6" />
+          <img src={logoPath} alt="JW Pickem Logo" className="mx-auto w-32 mb-6" />
           <h2 className="text-xl font-semibold mb-2">Welcome to the Wednesday Report</h2>
-          <p className="mb-2">
-            A biased, highly opinionated compendium of thoughts and insights on the NFL.
-          </p>
+          <p className="mb-2">A biased, highly opinionated compendium of thoughts and insights on the NFL.</p>
           <p>Select the year and week from the drop downs to read from the JW's Pick'em archives.</p>
         </div>
       )}

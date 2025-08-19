@@ -43,16 +43,32 @@ export default function App() {
       <Navbar loggedIn={!!user} onLogout={handleLogout} />
       <div className="pt-28">
         <div className="max-w-6xl mx-auto px-4">
+          
+          {/* Redirect from root "/" */}
           <Routes>
-            <Route path="home" element={user ? <HomePage /> : <Navigate to="login" />} />
-            <Route path="login" element={<Login />} />
-            <Route path="signup" element={<SignUp />} />
-            <Route path="picks" element={user ? <WeeklyPicksPage /> : <Navigate to="login" />} />
-            <Route path="leaderboard" element={user ? <LeaderboardPage /> : <Navigate to="login" />} />
-            <Route path="survivor" element={user ? <SurvivorPage /> : <Navigate to="login" />} />
-            <Route path="wednesday-reports" element={user ? <WednesdayReportsPage /> : <Navigate to="login" />} />
-            <Route path="payments" element={user ? <PaymentsPage /> : <Navigate to="login" />} />
+              {/* Redirect from root "/" */}
+              <Route
+                path="/"
+                element={user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />}
+              />
+
+              <Route path="/home" element={user ? <HomePage /> : <Navigate to="/login" />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/picks" element={user ? <WeeklyPicksPage /> : <Navigate to="/login" />} />
+              <Route path="/leaderboard" element={user ? <LeaderboardPage /> : <Navigate to="/login" />} />
+              <Route path="/survivor" element={user ? <SurvivorPage /> : <Navigate to="/login" />} />
+              <Route path="/wednesday-reports" element={user ? <WednesdayReportsPage /> : <Navigate to="/login" />} />
+              <Route path="/payments" element={user ? <PaymentsPage /> : <Navigate to="/login" />} />
+
+              {/* Catch-all route for unknown paths */}
+              <Route
+                path="*"
+                element={user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />}
+              />
           </Routes>
+
+
         </div>
       </div>
     </>
