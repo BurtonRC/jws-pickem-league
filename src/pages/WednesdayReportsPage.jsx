@@ -60,13 +60,14 @@ export default function WednesdayReportsPage() {
 
     if (selectedReport) {
       const processedContent = selectedReport.content
-        // remove any leftover <link ... .css>
-        .replace(/<link[^>]+\.css[^>]*>/gi, "")
+        // remove ANY <link ...> tags that reference CSS
+        .replace(/<link[^>]*href=["'][^"']*\.css[^"']*["'][^>]*>/gi, "")
         // replace old <img> tags with your new logo
         .replace(
-          /<img[^>]*>/g,
+          /<img[^>]*>/gi,
           `<img src="/images/pickem-logo.png" alt="JW Pickem Logo" class="mx-auto my-4 w-32" />`
         );
+
 
       setReportToShow({ ...selectedReport, processedContent });
     } else {
