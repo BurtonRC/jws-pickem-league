@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
@@ -43,14 +44,14 @@ export default function App() {
       <div className="pt-28">
         <div className="max-w-6xl mx-auto px-4">
           <Routes>
-            <Route path="/home" element={user ? <HomePage /> : <Navigate to="/login" />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/picks" element={user ? <WeeklyPicksPage /> : <Navigate to="/login" />} />
-            <Route path="/leaderboard" element={user ? <LeaderboardPage /> : <Navigate to="/login" />} />
-            <Route path="/survivor" element={user ? <SurvivorPage /> : <Navigate to="/login" />} />
-            <Route path="/wednesday-reports" element={user ? <WednesdayReportsPage /> : <Navigate to="/login" />} />
-            <Route path="/payments" element={user ? <PaymentsPage /> : <Navigate to="/login" />} />
+            <Route path="home" element={user ? <HomePage /> : <Navigate to="login" />} />
+            <Route path="login" element={<Login />} />
+            <Route path="signup" element={<SignUp />} />
+            <Route path="picks" element={user ? <WeeklyPicksPage /> : <Navigate to="login" />} />
+            <Route path="leaderboard" element={user ? <LeaderboardPage /> : <Navigate to="login" />} />
+            <Route path="survivor" element={user ? <SurvivorPage /> : <Navigate to="login" />} />
+            <Route path="wednesday-reports" element={user ? <WednesdayReportsPage /> : <Navigate to="login" />} />
+            <Route path="payments" element={user ? <PaymentsPage /> : <Navigate to="login" />} />
           </Routes>
         </div>
       </div>
