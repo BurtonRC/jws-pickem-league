@@ -4,7 +4,7 @@ import { HashRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
 
-const repoName = import.meta.env.PROD ? '/burtonrc' : '';
+const repoName = import.meta.env.PROD ? '/jws-pickem-league' : '';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
