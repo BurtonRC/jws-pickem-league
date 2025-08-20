@@ -1,17 +1,14 @@
-// src/main.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
 
-if (window.location.pathname !== '/') {
-  window.history.replaceState(null, '', '/');
-}
+const repoName = import.meta.env.PROD ? '/burtonrc' : '';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <HashRouter>
+    <HashRouter basename={repoName}>
       <App />
     </HashRouter>
   </React.StrictMode>
