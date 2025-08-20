@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { Link } from "react-router-dom";
 
 export default function HomePage() {
   const [report, setReport] = useState(null);
@@ -79,12 +80,10 @@ export default function HomePage() {
             <h2 className="text-2xl font-bold mb-2">{report.title}</h2>
             <p className="text-sm text-gray-500 mb-4">{report.report_date}</p>
             <div dangerouslySetInnerHTML={{ __html: report.content }} />
-            <a
-              href="/wednesday-reports"
-              className="text-blue-600 hover:underline mt-4 block"
-            >
+            <Link to="/wednesday-reports" className="text-blue-600 hover:underline mt-4 block">
               View Archive →
-            </a>
+            </Link>
+
           </section>
         )}
         {error && <p className="text-red-500">{error}</p>}
