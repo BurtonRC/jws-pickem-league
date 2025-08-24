@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
-import Navbar from './components/Navbar';
+import MainLayout from './components/MainLayout';
 import HomePage from './pages/HomePage';
 import WeeklyPicksPage from './pages/WeeklyPicksPage';
 import LeaderboardPage from './pages/LeaderboardPage';
@@ -39,38 +39,96 @@ export default function App() {
   };
 
   return (
-    <>
-      <Navbar loggedIn={!!user} onLogout={handleLogout} />
-      <div className="pt-28">
-        <div className="max-w-6xl mx-auto px-4">
-          
-          {/* Redirect from root "/" */}
-          <Routes>
-              {/* Redirect from root "/" */}
-              <Route
-                path="/"
-                element={user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />}
-              />
+    <Routes>
+      {/* Root redirect */}
+      <Route
+        path="/"
+        element={user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />}
+      />
 
-              <Route path="/home" element={user ? <HomePage /> : <Navigate to="/login" />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<SignUp />} />
-              <Route path="/picks" element={user ? <WeeklyPicksPage /> : <Navigate to="/login" />} />
-              <Route path="/leaderboard" element={user ? <LeaderboardPage /> : <Navigate to="/login" />} />
-              <Route path="/survivor" element={user ? <SurvivorPage /> : <Navigate to="/login" />} />
-              <Route path="/wednesday-reports" element={user ? <WednesdayReportsPage /> : <Navigate to="/login" />} />
-              <Route path="/payments" element={user ? <PaymentsPage /> : <Navigate to="/login" />} />
+      {/* Auth pages */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<SignUp />} />
 
-              {/* Catch-all route for unknown paths */}
-              <Route
-                path="*"
-                element={user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />}
-              />
-          </Routes>
+      {/* Pages with MainLayout (Scoreboard + Navbar + Page Content) */}
+      <Route
+        path="/home"
+        element={
+          user ? (
+            <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+              <HomePage />
+            </MainLayout>
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/picks"
+        element={
+          user ? (
+            <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+              <WeeklyPicksPage />
+            </MainLayout>
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/leaderboard"
+        element={
+          user ? (
+            <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+              <LeaderboardPage />
+            </MainLayout>
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/survivor"
+        element={
+          user ? (
+            <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+              <SurvivorPage />
+            </MainLayout>
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/wednesday-reports"
+        element={
+          user ? (
+            <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+              <WednesdayReportsPage />
+            </MainLayout>
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/payments"
+        element={
+          user ? (
+            <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+              <PaymentsPage />
+            </MainLayout>
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
 
-
-        </div>
-      </div>
-    </>
+      {/* Catch-all redirect */}
+      <Route
+        path="*"
+        element={user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />}
+      />
+    </Routes>
   );
 }

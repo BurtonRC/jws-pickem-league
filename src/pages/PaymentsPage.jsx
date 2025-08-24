@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 export default function DynamicPaymentPage() {
-  const CAD_ENTRY_FEE = 95;
+  const CAD_ENTRY_FEE = 100;
 
   const [rates, setRates] = useState({ USD: null, EUR: null });
   const [loading, setLoading] = useState(true);

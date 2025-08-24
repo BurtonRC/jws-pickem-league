@@ -1,67 +1,122 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from "react";
+import { NavLink, Link } from "react-router-dom";
 
 export default function Navbar({ loggedIn, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const hoverColorClass = "hover:text-[#b1945a]";
+  // Hover color
+  const hoverColorClass = "hover:text-[#f1f2f3]";
 
-  // Use BASE_URL so it works locally and on GitHub Pages
-  const logoPath = import.meta.env.BASE_URL + 'images/pickem-logo.png';
+  // Base link styles
+  const linkBase = "relative flex items-center px-2 py-2 transition-colors";
+
+  // Active link arrow doubled (12px)
+  const linkActive =
+    "text-[#f1f2f3] after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 " +
+    "after:bottom-0 after:border-l-[9px] after:border-r-[9px] after:border-b-[9px] " +
+    "after:border-l-transparent after:border-r-transparent after:border-b-white";
+
+  const logoPath = `${import.meta.env.BASE_URL}images/pickem-logo.png`;
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-gray-900 text-white shadow-md z-50">
-      <div className="max-w-6xl mx-auto flex justify-between items-center p-4">
-
-        {/* Left side with logo */}
-        <div className="flex items-center space-x-4">
-          <Link to="/home">
-            <img
-              src={logoPath}
-              alt="JWs PickEm League Logo"
-              className="h-20"
-            />
+    <nav className="w-full bg-gray-900 text-white shadow z-50">
+      {/* Desktop & mobile wrapper matches scoreboard width */}
+      <div className="max-w-[70%] mx-[auto] flex items-center justify-between px-4 sm:px-6 lg:px-8" style={{ height: "56px" }}>
+        {/* Left: logo + nav links */}
+        <div className="flex items-center">
+          {/* Logo flush left */}
+          <Link to="/home" aria-label="Home" className="flex-shrink-0">
+            <img src={logoPath} alt="JWs PickEm League Logo" className="h-10 w-auto" />
           </Link>
-        </div>
 
-        {/* Right side: nav links + auth (desktop) */}
-        <div className="hidden md:flex items-center space-x-6">
-          {/* Links */}
-          <div className="flex space-x-6">
-            <Link to="/home" className={hoverColorClass}>Home</Link>
+          {/* Desktop nav links */}
+          <div className="hidden md:flex items-center gap-[12px] ml-6">
+            <NavLink
+              to="/home"
+              className={({ isActive }) => `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`}
+              style={{ paddingTop: "17px", paddingBottom: "17px" }}
+            >
+              Home
+            </NavLink>
+
             {loggedIn && (
               <>
-                <Link to="/picks" className={hoverColorClass}>Weekly Picks</Link>
-                <Link to="/leaderboard" className={hoverColorClass}>Leaderboard</Link>
-                <Link to="/survivor" className={hoverColorClass}>Survivor</Link>
-                <Link to="/wednesday-reports" className={hoverColorClass}>Wed Reports</Link>
-                <Link to="/payments" className={hoverColorClass}>Payments</Link>
+                <NavLink
+                  to="/picks"
+                  className={({ isActive }) => `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`}
+                  style={{ paddingTop: "17px", paddingBottom: "17px" }}
+                >
+                  Weekly Picks
+                </NavLink>
+                <NavLink
+                  to="/leaderboard"
+                  className={({ isActive }) => `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`}
+                  style={{ paddingTop: "17px", paddingBottom: "17px" }}
+                >
+                  Leaderboard
+                </NavLink>
+                <NavLink
+                  to="/survivor"
+                  className={({ isActive }) => `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`}
+                  style={{ paddingTop: "17px", paddingBottom: "17px" }}
+                >
+                  Survivor
+                </NavLink>
+                <NavLink
+                  to="/wednesday-reports"
+                  className={({ isActive }) => `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`}
+                  style={{ paddingTop: "17px", paddingBottom: "17px" }}
+                >
+                  Wed Reports
+                </NavLink>
+                <NavLink
+                  to="/payments"
+                  className={({ isActive }) => `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`}
+                  style={{ paddingTop: "17px", paddingBottom: "17px" }}
+                >
+                  Payments
+                </NavLink>
+              </>
+            )}
+
+            {!loggedIn && (
+              <>
+                <NavLink
+                  to="/login"
+                  className={({ isActive }) => `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`}
+                  style={{ paddingTop: "17px", paddingBottom: "17px" }}
+                >
+                  Login
+                </NavLink>
+                <NavLink
+                  to="/signup"
+                  className={({ isActive }) => `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`}
+                  style={{ paddingTop: "17px", paddingBottom: "17px" }}
+                >
+                  Sign Up
+                </NavLink>
               </>
             )}
           </div>
-
-          {/* Auth buttons */}
-          {loggedIn ? (
-            <button
-              onClick={onLogout}
-              className="px-4 py-2 text-red-400 font-semibold hover:text-red-600"
-            >
-              Log Out
-            </button>
-          ) : (
-            <>
-              <Link to="/login" className={hoverColorClass}>Login</Link>
-              <Link to="/signup" className={hoverColorClass}>Sign Up</Link>
-            </>
-          )}
         </div>
+
+        {/* Right side logout */}
+        {loggedIn && (
+          <button
+            onClick={onLogout}
+            className="hidden md:block px-3 py-2 font-semibold text-red-400 hover:text-red-500 ml-auto"
+          >
+            Log Out
+          </button>
+        )}
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden focus:outline-none"
-          onClick={() => setMenuOpen(!menuOpen)}
+          className="md:hidden focus:outline-none ml-auto"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label="Toggle Menu"
         >
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {menuOpen ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             ) : (
@@ -71,33 +126,34 @@ export default function Navbar({ loggedIn, onLogout }) {
         </button>
       </div>
 
-      {/* Mobile dropdown menu */}
+      {/* Mobile dropdown */}
       {menuOpen && (
-        <div className="md:hidden bg-gray-800 px-4 pb-4 space-y-2">
-          <Link to="/home" className="block hover:text-[#b1945a]" onClick={() => setMenuOpen(false)}>Home</Link>
-          {loggedIn && (
-            <>
-              <Link to="/picks" className="block hover:text-[#b1945a]" onClick={() => setMenuOpen(false)}>Weekly Picks</Link>
-              <Link to="/leaderboard" className="block hover:text-[#b1945a]" onClick={() => setMenuOpen(false)}>Leaderboard</Link>
-              <Link to="/survivor" className="block hover:text-[#b1945a]" onClick={() => setMenuOpen(false)}>Survivor</Link>
-              <Link to="/wednesday-reports" className="block hover:text-[#b1945a]" onClick={() => setMenuOpen(false)}>Wed Reports</Link>
-              <Link to="/payments" className="block hover:text-[#b1945a]" onClick={() => setMenuOpen(false)}>Payments</Link>
-            </>
-          )}
-
-          {loggedIn ? (
-            <button
-              onClick={() => { onLogout(); setMenuOpen(false); }}
-              className="w-full text-left px-4 py-2 text-red-400 font-semibold hover:text-red-600"
+        <div className="md:hidden bg-gray-800 border-t border-gray-700">
+          <div className="max-w-[70%] mx-auto px-4 py-2 space-y-2">
+            <NavLink
+              to="/home"
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) => `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`}
             >
-              Log Out
-            </button>
-          ) : (
-            <>
-              <Link to="/login" className="block hover:text-[#b1945a]" onClick={() => setMenuOpen(false)}>Login</Link>
-              <Link to="/signup" className="block hover:text-[#b1945a]" onClick={() => setMenuOpen(false)}>Sign Up</Link>
-            </>
-          )}
+              Home
+            </NavLink>
+
+            {loggedIn ? (
+              <>
+                <NavLink to="/picks" onClick={() => setMenuOpen(false)} className={({ isActive }) => `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`}>Weekly Picks</NavLink>
+                <NavLink to="/leaderboard" onClick={() => setMenuOpen(false)} className={({ isActive }) => `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`}>Leaderboard</NavLink>
+                <NavLink to="/survivor" onClick={() => setMenuOpen(false)} className={({ isActive }) => `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`}>Survivor</NavLink>
+                <NavLink to="/wednesday-reports" onClick={() => setMenuOpen(false)} className={({ isActive }) => `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`}>Wed Reports</NavLink>
+                <NavLink to="/payments" onClick={() => setMenuOpen(false)} className={({ isActive }) => `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`}>Payments</NavLink>
+                <button onClick={() => { onLogout(); setMenuOpen(false); }} className="w-full text-left px-2 py-2 font-semibold text-red-400 hover:text-red-500">Log Out</button>
+              </>
+            ) : (
+              <>
+                <NavLink to="/login" onClick={() => setMenuOpen(false)} className={({ isActive }) => `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`}>Login</NavLink>
+                <NavLink to="/signup" onClick={() => setMenuOpen(false)} className={({ isActive }) => `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`}>Sign Up</NavLink>
+              </>
+            )}
+          </div>
         </div>
       )}
     </nav>
