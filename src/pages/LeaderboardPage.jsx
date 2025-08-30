@@ -1,42 +1,41 @@
 import React, { useState, useEffect } from "react";
-
-// Mock data for development
-const mockData = [
-  {
-    user_name: "Alice Hardy",
-    weeks: [
-      { normal: 3, db: 2, ps: 1 }, // Week 1
-      { normal: 4, db: 1, ps: 2 }, // Week 2
-    ],
-  },
-  {
-    user_name: "Bob Uldric",
-    weeks: [
-      { normal: 2, db: 3, ps: 1 },
-      { normal: 5, db: 0, ps: 2 },
-    ],
-  },
-  {
-    user_name: "Charlie Brown",
-    weeks: [
-      { normal: 4, db: 1, ps: 0 },
-      { normal: 3, db: 2, ps: 1 },
-    ],
-  },
-];
+import { supabase } from "../supabaseClient";
 
 export default function LeaderboardPage() {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    // In development, use mock data
-    setUsers(mockData);
+    const fetchLeaderboard = async () => {
+      const { data, error } = await supabase
+        .from("weekly_results")
+        .select("week, this_week_score, prev_week_score, overall_score, total_drive_bys, total_point_spreads, profiles(username)")
+        .order("week");
 
-    // Later: fetch real data from Supabase
-    // fetchLeaderboardData();
+      if (error) {
+        console.error("Error fetching leaderboard:", error);
+        return;
+      }
+
+      // Group results per user
+      const grouped = {};
+      data.forEach((row) => {
+        const user = row.profiles?.username || "Unknown";
+        if (!grouped[user]) grouped[user] = { user_name: user, weeks: [] };
+        grouped[user].weeks[row.week - 1] = {
+          normal: row.this_week_score, // your schema can split this if needed
+          db: row.total_drive_bys,
+          ps: row.total_point_spreads,
+        };
+      });
+
+      setUsers(Object.values(grouped));
+    };
+
+    fetchLeaderboard();
   }, []);
 
   const renderWeekTotal = (week) => {
+    if (!week) return 0;
     return week.normal + week.db + week.ps;
   };
 

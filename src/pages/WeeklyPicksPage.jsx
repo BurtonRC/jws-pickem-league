@@ -1,90 +1,231 @@
-import React, { useEffect, useState } from "react";
-import gamesData from "../data/nfl_schedule_2025.json";
+// WeeklyPicksPage.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
+import WarningModal from "../components/WarningModal";
+import * as leagueConfig from "../data/leagueConfig";
+
+
+/** Local confirmation modal (keeps your WarningModal for warnings only) */
+function ConfirmationModal({ isOpen, message, onClose }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-6 space-y-4">
+        <h2 className="text-xl font-bold text-green-600">Picks Submitted</h2>
+        <p className="text-gray-700">{message}</p>
+        <button
+          className="mt-2 w-full bg-green-500 text-white font-semibold py-2 rounded-xl hover:bg-green-600 active:bg-green-700 transition"
+          onClick={onClose}
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function WeeklyPicksPage() {
+  // Core selection state (unchanged)
   const [selectedTeams, setSelectedTeams] = useState({});
   const [sliderOn, setSliderOn] = useState({});
   const [pointSpreadSelection, setPointSpreadSelection] = useState({});
-  const [submitted, setSubmitted] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(null);
-  
-  // Survivor states
+
+  // Two-phase submission locks
+  const [submittedFirst, setSubmittedFirst] = useState(false);
+  const [submittedSecond, setSubmittedSecond] = useState(false);
+
+  // Two countdown strings, shown inline with their submit areas
+  const [timeFirst, setTimeFirst] = useState(null);
+  const [timeSecond, setTimeSecond] = useState(null);
+
+  // Survivor
   const [survivorPick, setSurvivorPick] = useState("");
   const [survivorLost, setSurvivorLost] = useState(false);
   const [pickedTeams, setPickedTeams] = useState([]);
-  
 
-  const today = new Date();
-  const currentWeek =
-    gamesData.weeks.find((week) => {
-      const start = new Date(week.startDate);
-      const end = new Date(week.endDate);
-      return today >= start && today <= end;
-    }) || gamesData.weeks[0];
+  // Modals
+  const [warnOpen, setWarnOpen] = useState(false);
+  const [warnMessages, setWarnMessages] = useState([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmMsg, setConfirmMsg] = useState("");
 
-  const games = currentWeek?.games || [];
-  const kickoffUTC = currentWeek?.kickoffUTC ? new Date(currentWeek.kickoffUTC) : null;
-  const picksOpen = kickoffUTC ? new Date() < kickoffUTC : true;
+  // Weeks & games
+  const [currentWeek, setCurrentWeek] = useState(null);
+  const [games, setGames] = useState([]);
+  const [allTeams, setAllTeams] = useState([]);
 
-  // Derive all teams from schedule
-  const allTeams = Array.from(
-    new Set(gamesData.weeks.flatMap((week) => week.games.flatMap((game) => game.teams)))
-  );
+  // Track Drive-By (DB) picks separately
+  const [DBs, setDBs] = useState({});
 
-  useEffect(() => {
-    if (!kickoffUTC) {
-      setTimeRemaining(null);
-      return;
+  // Helper: determine if a game is in the first submit group (Thu-Fri-Sat)
+  const isFirstSubmitGame = (game) => ["Thu", "Fri", "Sat"].includes(game.day);
+
+
+// Fetch ESPN schedule dynamically
+useEffect(() => {
+  const fetchWeekGames = async () => {
+    console.log("Fetching ESPN schedule...");
+    try {
+      const res = await fetch(
+        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard`
+      );
+      const data = await res.json();
+
+      console.log("ESPN raw events:", data.events, "Week:", data.season?.week);
+
+      // Determine current week based on today (Canada UTC)
+      const today = new Date();
+      const weekObj = { weekNumber: data.season?.week || 1 };
+
+      // Map ESPN games into your expected structure
+      const weekGames = data.events.map((game, idx) => {
+        const g = game;
+        const matchup = g.name.split(" at ");
+        return {
+          id: g.id,
+          teams: matchup,
+          dbTeam: "", // will be injected next
+          dbLabel: "", // will be injected next
+          pointSpread: [], // will be injected next
+          day: new Date(g.date).toLocaleString("en-US", {
+            weekday: "short",
+            timeZone: "UTC",
+          }),
+          kickoffUTC: g.date,
+        };
+      });
+
+      // ---- Overlay your manual DB teams and point spreads ----
+
+      const weekGamesWithConfig = weekGames.map((game) => {
+        const gameIdStr = String(game.id);
+
+        const dbTeam = leagueConfig.driveByGames[gameIdStr] || "";
+        const dbLabel = dbTeam ? "DB" : "";
+        const ps = leagueConfig.pointSpreads[gameIdStr] || [];
+
+        console.log(`Game ID: ${game.id}`, "Teams:", game.teams, "DB Team:", dbTeam, "Label:", dbLabel, "PS:", ps);
+
+        return {
+          ...game,
+          dbTeam,
+          dbLabel,
+          pointSpread: ps
+        };
+      });
+
+      console.log("Mapped games with config:", weekGamesWithConfig);
+
+      setCurrentWeek(weekObj);
+      setGames(weekGamesWithConfig);
+
+
+      // Extract all teams
+      setAllTeams(
+        Array.from(
+          new Set(
+            weekGamesWithConfig.flatMap((game) => game.teams)
+          )
+        )
+      );
+    } catch (err) {
+      console.error("Failed to fetch NFL schedule:", err);
     }
-    const updateCountdown = () => {
-      const diff = kickoffUTC - new Date();
-      if (diff <= 0) {
-        setTimeRemaining("Kickoff reached!");
-      } else {
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
+  };
+
+  fetchWeekGames();
+}, []);
+
+useEffect(() => {
+  // Initialize sliderOn based on selectedTeams
+  const initialSliders = {};
+  games.forEach((g) => {
+    if (selectedTeams[g.id] === g.dbTeam) {
+      initialSliders[g.id] = true;
+    }
+  });
+  setSliderOn(initialSliders);
+}, [games, selectedTeams]);
+
+
+
+  // Kickoff helpers
+  const firstKickoff = useMemo(() => {
+    const g0 = games[0];
+    if (g0?.kickoffUTC) return new Date(g0.kickoffUTC);
+    return null;
+  }, [games]);
+
+  const secondKickoff = useMemo(() => {
+    const rest = games.slice(1);
+    const times = rest
+      .map((g) => (g.kickoffUTC ? new Date(g.kickoffUTC) : null))
+      .filter(Boolean);
+    if (times.length === 0) return null;
+    return new Date(Math.min(...times.map((d) => d.getTime())));
+  }, [games]);
+
+  // Countdown effect
+  useEffect(() => {
+    const setup = (kickoff, setStr) => {
+      if (!kickoff) {
+        setStr("Kickoff time TBD");
+        return () => {};
       }
+      const update = () => {
+        const diff = kickoff - new Date();
+        if (diff <= 0) {
+          setStr("Kickoff reached!");
+        } else {
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          setStr(`Time until kickoff: ${hours}h ${minutes}m ${seconds}s`);
+        }
+      };
+      update();
+      const t = setInterval(update, 1000);
+      return () => clearInterval(t);
     };
-    updateCountdown();
-    const timer = setInterval(updateCountdown, 1000);
-    return () => clearInterval(timer);
-  }, [kickoffUTC]);
+    const c1 = setup(firstKickoff, setTimeFirst);
+    const c2 = setup(secondKickoff, setTimeSecond);
+    return () => {
+      c1 && c1();
+      c2 && c2();
+    };
+  }, [firstKickoff, secondKickoff]);
 
-  const canSubmit = () => {
-    const atLeastOneDBOn = Object.entries(sliderOn).some(([id, val]) => {
-      if (!val) return false;
-      const game = games.find((g) => g.id === Number(id));
-      if (!game) return false;
-      return selectedTeams[id] === game.dbTeam;
-    });
+  // Disable logic per section
+  const now = new Date();
+  
+  const firstLocked = submittedFirst || (firstKickoff ? now >= firstKickoff : false);
 
-    const allPointSpreadsSelected = games.every(
-      (game) =>
-        !game.pointSpread ||
-        game.pointSpread.length === 0 ||
-        (pointSpreadSelection[game.id] && pointSpreadSelection[game.id] !== "")
-    );
+  const secondLocked =
+    submittedSecond || (secondKickoff ? now >= secondKickoff : false);
 
-    const allTeamsSelected = games.every(
-      (game) => selectedTeams[game.id] && selectedTeams[game.id] !== ""
-    );
-
-    // Survivor pick must also be selected if not lost
-    const survivorOk = survivorLost || survivorPick !== "";
-
-    return atLeastOneDBOn && allPointSpreadsSelected && allTeamsSelected && survivorOk && picksOpen;
-  };
-
+  // Handlers
   const toggleSlider = (id, checked, dbTeam) => {
-    setSliderOn((prev) => ({ ...prev, [id]: checked }));
-    setSelectedTeams((prev) => ({
-      ...prev,
-      [id]: checked ? dbTeam : "",
-    }));
-  };
+  // Update slider toggle UI
+  setSliderOn((prev) => ({ ...prev, [id]: checked }));
+
+  // Update selected team
+  setSelectedTeams((prev) => ({
+    ...prev,
+    [id]: checked ? dbTeam : "",
+  }));
+
+  // Update DBs state: add if checked, remove if unchecked
+  setDBs((prev) => {
+    const newDBs = { ...prev };
+    if (checked) newDBs[id] = dbTeam;
+    else delete newDBs[id];
+    return newDBs;
+  });
+
+  console.log("ToggleSlider called:", { id, checked, dbTeam });
+  console.log("Current DBs state:", { ...DBs, [id]: checked ? dbTeam : null });
+};
+
 
   const handleSelectChange = (id, value, dbTeam) => {
     setSelectedTeams((prev) => ({ ...prev, [id]: value }));
@@ -98,53 +239,280 @@ export default function WeeklyPicksPage() {
     setPointSpreadSelection((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleSubmit = async () => {
-    if (!canSubmit()) return;
-    setSubmitted(true);
-
-    // Save to Supabase
-    try {
-      // Weekly picks
-      await supabase.from("weekly_picks").upsert([
-        {
-          user_id: supabase.auth.user()?.id,
-          week: currentWeek.weekNumber,
-          picks: selectedTeams,
-          point_spreads: pointSpreadSelection,
-        },
-      ]);
-
-      // Survivor pick
-      if (!survivorLost && survivorPick) {
-        await supabase.from("survivor_picks").upsert([
-          {
-            user_id: supabase.auth.user()?.id,
-            week: currentWeek.weekNumber,
-            team: survivorPick,
-          },
-        ]);
-      }
-    } catch (err) {
-      console.error("Error saving picks:", err);
+  // Validation functions
+  const validateFirst = () => {
+  const msgs = [];
+  const firstGames = games.filter(isFirstSubmitGame);
+  firstGames.forEach((g) => {
+    if (!selectedTeams[g.id]) msgs.push(`Pick the winner for ${g.teams[0]} at ${g.teams[1]}.`);
+    if (g.pointSpread?.length && !pointSpreadSelection[g.id]) {
+      msgs.push(`Pick the point spread for ${g.teams[0]} at ${g.teams[1]}.`);
     }
+  });
+  return msgs;
+};
+
+
+  const validateSecond = () => {
+    const msgs = [];
+    const rest = games.slice(1);
+
+    let missingTeams = 0;
+    let missingPS = 0;
+
+    rest.forEach((g) => {
+      if (!selectedTeams[g.id]) missingTeams++;
+      if (g.pointSpread?.length && !pointSpreadSelection[g.id]) missingPS++;
+    });
+
+    if (missingTeams)
+      msgs.push(
+        missingTeams === 1
+          ? "Select the remaining game winner."
+          : `Select all remaining game winners (${missingTeams} missing).`
+      );
+
+    if (missingPS)
+      msgs.push(
+        missingPS === 1
+          ? "Select the remaining point spread."
+          : `Select all remaining point spreads (${missingPS} missing).`
+      );
+
+    const driveByOK = games.some((g) => {
+      // Check if the selected team for this game matches its DB
+      return selectedTeams[g.id] === g.dbTeam;
+    });
+    if (!driveByOK) msgs.push("Select at least one Drive-By for the week.");
+
+
+    if (!survivorLost && !survivorPick) msgs.push("Select your Survivor pick.");
+
+    return msgs;
   };
 
-  const inputsDisabled = !picksOpen || submitted;
+      // Fetch existing picks + survivor pick so the page state reflects previously submitted picks
+const loadExistingPicks = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-  if (!currentWeek) return <div>No games for this week.</div>;
+    if (!currentWeek?.weekNumber) return;
+    const weekNum = currentWeek.weekNumber;
 
+    // Fetch weekly picks
+    const { data: existingData, error: fetchError } = await supabase
+      .from("weekly_picks")
+      .select("picks, point_spreads, dbs")
+      .eq("user_id", user.id)
+      .eq("week", weekNum)
+      .single();
+
+    if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
+
+    // Load existing picks into state
+    setSelectedTeams(existingData?.picks || {});
+    setPointSpreadSelection(existingData?.point_spreads || {});
+    setDBs(existingData?.dbs || {}); // restores DBs correctly
+
+    // Fetch survivor pick separately
+    const { data: survivorData } = await supabase
+      .from("survivor_picks")
+      .select("team")
+      .eq("user_id", user.id)
+      .eq("week", weekNum)
+      .single();
+
+    setSurvivorPick(survivorData?.team || "");
+
+    // Track previously picked teams to disable them in the survivor select
+    if (survivorData?.team) {
+      setPickedTeams([survivorData.team]);
+    } else {
+      setPickedTeams([]);
+    }
+
+    // Lock first/second submits based on existing picks
+    if (Object.keys(existingData?.picks || {}).length) setSubmittedFirst(true);
+    if (Object.keys(existingData?.picks || {}).length === games.length) setSubmittedSecond(true);
+
+  } catch (err) {
+    console.error("Error loading existing picks:", err.message || err);
+  }
+};
+
+
+
+    // This calls loadExistingPicks function
+    useEffect(() => {
+      if (!currentWeek?.weekNumber) return;
+      loadExistingPicks();
+    }, [currentWeek]);
+
+
+
+    // ---- Save picks to Supabase (merge first and second submit) ----
+    const saveToSupabase = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!user) throw new Error("No logged-in user");
+        if (!currentWeek?.weekNumber) throw new Error("Week number not determined.");
+        const weekNum = currentWeek.weekNumber;
+
+        // Fetch existing picks to merge
+        const { data: existingData, error: fetchError } = await supabase
+          .from("weekly_picks")
+          .select("picks, point_spreads, dbs, survivor_pick")
+          .eq("user_id", user.id)
+          .eq("week", weekNum)
+          .single();
+
+        if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
+
+        // Merge picks, point spreads, DBs, survivor
+        // Merge everything before upsert
+        const mergedPicks = { ...(existingData?.picks || {}), ...selectedTeams };
+        const mergedPointSpreads = { ...(existingData?.point_spreads || {}), ...pointSpreadSelection };
+        const mergedDBs = { ...(existingData?.dbs || {}), ...DBs };
+        const mergedSurvivor = survivorPick || existingData?.survivor_pick || null; // <-- must come before upsert
+
+
+        // Upsert into weekly_picks
+        const { data: upsertData, error: upsertError } = await supabase
+          .from("weekly_picks")
+          .upsert(
+            [{
+              user_id: user.id,
+              week: weekNum,
+              picks: mergedPicks,
+              point_spreads: mergedPointSpreads,
+              dbs: mergedDBs,
+              survivor_pick: mergedSurvivor
+            }],
+            { onConflict: ["user_id", "week"] }
+          )
+          .select();
+
+        if (upsertError) throw upsertError;
+        console.log("✅ Weekly picks saved/merged:", upsertData);
+        
+
+        // Also update survivor_picks table (optional)
+        if (!survivorLost && survivorPick) {
+          const { data: survivorData, error: survivorError } = await supabase
+            .from("survivor_picks")
+            .upsert(
+              [{ user_id: user.id, week: weekNum, team: survivorPick }],
+              { onConflict: ["user_id", "week"] }
+            )
+            .select();
+          if (survivorError) throw survivorError;
+          console.log("✅ Survivor pick saved/merged:", survivorData);
+        }
+
+      } catch (err) {
+        console.error("Error saving picks:", err.message || err);
+        throw err;
+      }
+    };
+
+
+
+
+
+// ---- Submit First Game(s) ----
+const onSubmitFirst = async () => {
+  if (firstLocked) return;
+
+  const msgs = validateFirst();
+  if (msgs.length) {
+    setWarnMessages(msgs);
+    setWarnOpen(true);
+    return;
+  }
+
+  try {
+    await saveToSupabase(); // Use central save function
+    setSubmittedFirst(true);
+    setConfirmMsg("First game pick submitted successfully.");
+    setConfirmOpen(true);
+  } catch (err) {
+    console.error("Error saving picks (Submit #1):", err);
+    setWarnMessages(["There was a problem saving your pick. Please try again."]);
+    setWarnOpen(true);
+  }
+};
+
+// ---- Submit Rest of Week Picks ----
+const onSubmitSecond = async () => {
+  if (secondLocked) return;
+
+  const msgs = validateSecond();
+  if (msgs.length) {
+    setWarnMessages(msgs);
+    setWarnOpen(true);
+    return;
+  }
+
+  try {
+    await saveToSupabase(); // Use central save function
+    setSubmittedSecond(true);
+    setConfirmMsg("Rest of week picks submitted successfully.");
+    setConfirmOpen(true);
+  } catch (err) {
+    console.error("Error saving picks (Submit #2):", err);
+    setWarnMessages(["There was a problem saving your picks. Please try again."]);
+    setWarnOpen(true);
+  }
+};
+
+
+  if (!games || !games.length) return <div>Loading games...</div>;
+
+  // Helper: shared cell content for DB toggle
+  const DBToggle = (game, disabled) =>
+    game.dbLabel && (
+      <div className={`flex items-center gap-2 ${disabled ? "opacity-50" : ""}`}>
+        <span>{game.dbLabel ? `${game.dbLabel}: ${dbTeamCity(game.dbTeam)}` : ""}</span>
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={sliderOn[game.id] || false}
+            onChange={(e) => toggleSlider(game.id, e.target.checked, game.dbTeam)}
+            className="sr-only peer"
+            disabled={disabled}
+          />
+          <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+        </label>
+      </div>
+    );
+
+  // Helper for DB team names
+      const dbTeamCity = (dbTeam) => {
+      const mapping = {
+        "Dallas Cowboys": "Dallas",
+        "Kansas City Chiefs": "Kansas City",
+        "Tampa Bay Buccaneers": "Tampa Bay",
+        "Los Angeles Rams": "Los Angeles",
+        "Los Angeles Chargers": "Los Angeles",
+        "New York Giants": "New York",
+        "New York Jets": "New York",
+        // add all other teams as needed
+      };
+      return mapping[dbTeam] || dbTeam.split(" ")[0]; // fallback
+    };
+
+
+  // ---- UI ----
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="w-full md:w-[90%] max-w-5xl mx-auto p-6 space-y-4">
-        <h1 className="text-2xl font-bold mb-4">Weekly Picks - Week {currentWeek.weekNumber}</h1>
+        <h1 className="text-2xl font-bold mb-4">
+          Weekly Picks - Week {currentWeek.weekNumber}
+        </h1>
 
-        {timeRemaining && (
-          <p className="mb-2 font-semibold">Time until kickoff: {timeRemaining}</p>
-        )}
-        {!picksOpen && (
-          <p className="mb-4 text-red-600 font-bold">Picks are closed for this week.</p>
-        )}
-
+        {/* ===== DESKTOP TABLE ===== */}
         <table className="hidden md:table w-full border-collapse">
           <thead className="bg-gray-100">
             <tr>
@@ -156,133 +524,229 @@ export default function WeeklyPicksPage() {
             </tr>
           </thead>
           <tbody>
-  {games.map((game) => (
-    <tr key={game.id}>
-      <td className="p-3">{game.teams[0]} at {game.teams[1]}</td>
-      <td className="p-3">{game.day}</td>
-      <td className="p-3">
-        {game.dbLabel && (
-          <div className="flex items-center gap-2">
-            <span>{game.dbLabel}</span>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={sliderOn[game.id] || false}
-                onChange={(e) => toggleSlider(game.id, e.target.checked, game.dbTeam)}
-                className="sr-only peer"
-                disabled={inputsDisabled}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-green-500 transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
-            </label>
-          </div>
-        )}
-      </td>
-      <td className="p-3">
-        {game.pointSpread && game.pointSpread.length > 0 && (
-          <select
-            className={`border rounded p-1 w-full ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
-            value={pointSpreadSelection[game.id] || ""}
-            onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
-            disabled={inputsDisabled}
-          >
-            <option value="">-- Select Cover --</option>
-            {game.pointSpread.map((ps, idx) => <option key={idx} value={ps}>{ps}</option>)}
-          </select>
-        )}
-      </td>
-      <td className="p-3">
-        <select
-          className={`border rounded p-1 w-full ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
-          value={selectedTeams[game.id] || ""}
-          onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
-          disabled={inputsDisabled}
-        >
-          <option value="">-- Select Team --</option>
-          {game.teams.map((team) => <option key={team} value={team}>{team}</option>)}
-        </select>
-      </td>
-    </tr>
-  ))}
+{(() => {
+    const lastFirstIndex = Math.max(
+      ...games.map((g, idx) => (["Thu", "Fri", "Sat"].includes(g.day) ? idx : -1))
+    );
 
-  {/* Survivor Pick Row */}
-  {!survivorLost && (
-    <tr className="bg-gray-50">
-      <td colSpan={4} className="p-3 font-semibold">Survivor Pick:</td>
-      <td className="p-3">
-        <select
-          className={`border rounded p-1 w-full ${survivorPick ? "bg-yellow-200" : ""}`}
-          value={survivorPick}
-          onChange={(e) => setSurvivorPick(e.target.value)}
-          disabled={inputsDisabled}
-        >
-          <option value="">-- Select Team --</option>
-          {allTeams.map((team) => (
-            <option
-              key={team}
-              value={team}
-              disabled={pickedTeams.includes(team)}
-              style={pickedTeams.includes(team) ? { color: "gray" } : {}}
-            >
-              {team} {pickedTeams.includes(team) ? "(used)" : ""}
-            </option>
-          ))}
+    // Map all games into rows
+    return games.map((game, idx) => {
+      const locked = isFirstSubmitGame(game) ? firstLocked : secondLocked;
 
-        </select>
-      </td>
-    </tr>
-  )}
-</tbody>
+      return (
+        <React.Fragment key={game.id}>
+          {/* Matchup row */}
+          <tr>
+            <td className="p-3">{game.teams[0]} at {game.teams[1]}</td>
 
+            {/* Day */}
+            <td className="p-3">{game.day}</td>
+
+            {/* Drive-By toggle */}
+            <td className="p-3">{DBToggle(game, locked)}</td>
+
+            {/* Point Spread select */}
+            <td className="p-3">
+              {game.pointSpread?.length > 0 && (
+                <select
+                  className={`border rounded p-1 w-full ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
+                  value={pointSpreadSelection[game.id] || ""}
+                  onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
+                  disabled={locked}
+                >
+                  <option value="">-- Select Point Spread --</option>
+                  {game.pointSpread.map((ps, psIdx) => (
+                    <React.Fragment key={psIdx}>
+                      <option value={`${game.teams[0]} ${ps >= 0 ? "+" : ""}${ps}`}>
+                        {game.teams[0]} {ps >= 0 ? "+" : ""}{ps}
+                      </option>
+                      <option value={`${game.teams[1]} ${ps <= 0 ? "+" : ""}${-ps}`}>
+                        {game.teams[1]} {ps <= 0 ? "+" : ""}{-ps}
+                      </option>
+                    </React.Fragment>
+                  ))}
+                </select>
+              )}
+            </td>
+
+            {/* Team selection */}
+            <td className="p-3">
+              <select
+                className={`border rounded p-1 w-full ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
+                value={selectedTeams[game.id] || ""}
+                onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
+                disabled={locked}
+              >
+                <option value="">-- Select Team --</option>
+                {game.teams.map((team) => (
+                  <option key={team} value={team}>{team}</option>
+                ))}
+              </select>
+            </td>
+          </tr>
+
+          {/* Insert Submit First Game(s) button after the last Thu/Fri/Sat game */}
+          {idx === lastFirstIndex && (
+            <tr>
+              <td colSpan={5} className="p-3">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg bg-white border p-3">
+                  <span className="font-semibold">{timeFirst || "Kickoff time TBD"}</span>
+                  <button
+                    onClick={onSubmitFirst}
+                    disabled={firstLocked}
+                    className={`px-4 py-2 rounded font-semibold text-white transition
+                      ${firstLocked ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600 active:bg-green-700"}`}
+                  >
+                    Submit First Game(s)
+                  </button>
+                </div>
+              </td>
+            </tr>
+          )}
+        </React.Fragment>
+      );
+    });
+  })()}
+
+            {/* Survivor row after rest of games */}
+            {!survivorLost && (
+              <tr className="bg-gray-50">
+                <td colSpan={4} className="p-3 font-semibold">
+                  Survivor Pick:
+                </td>
+                <td className="p-3">
+                  <select
+                    className={`border rounded p-1 w-full ${
+                      survivorPick ? "bg-yellow-200" : ""
+                    } ${secondLocked ? "opacity-60" : ""}`}
+                    value={survivorPick}
+                    onChange={(e) => setSurvivorPick(e.target.value)}
+                    disabled={secondLocked}
+                  >
+                    <option value="">-- Select Team --</option>
+                    {allTeams.map((team) => (
+                      <option
+                        key={team}
+                        value={team}
+                        disabled={pickedTeams.includes(team)}
+                        style={pickedTeams.includes(team) ? { color: "gray" } : {}}
+                      >
+                        {team} {pickedTeams.includes(team) ? "(used)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+            )}
+
+            {/* Submit #2 row (timer + button) */}
+            {games.length > 1 && (
+              <tr>
+                <td colSpan={5} className="p-3">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg bg-white border p-3">
+                    <span className="font-semibold">
+                      {timeSecond || "Kickoff time TBD"}
+                    </span>
+                    <button
+                      onClick={onSubmitSecond}
+                      disabled={secondLocked}
+                      className={`px-4 py-2 rounded font-semibold text-white transition
+                        ${secondLocked ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 active:bg-blue-700"}`}
+                    >
+                      Submit Rest of Picks
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
         </table>
 
-        {/* Mobile layout */}
-        <div className="md:hidden space-y-4">
-  {games.map((game) => (
-    <div key={game.id} className="bg-white p-3 rounded shadow">
-      <div className="font-semibold">{game.teams[0]} at {game.teams[1]}</div>
-      <div>Day: {game.day}</div>
-      {game.dbLabel && (
-        <div className="flex items-center gap-2">
-          <span>{game.dbLabel}</span>
-          <input
-            type="checkbox"
-            checked={sliderOn[game.id] || false}
-            onChange={(e) => toggleSlider(game.id, e.target.checked, game.dbTeam)}
-            disabled={inputsDisabled}
-          />
-        </div>
-      )}
-      {game.pointSpread && game.pointSpread.length > 0 && (
-        <select
-          className={`border rounded p-1 w-full mt-2 ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
-          value={pointSpreadSelection[game.id] || ""}
-          onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
-          disabled={inputsDisabled}
-        >
-          <option value="">-- Select Cover --</option>
-          {game.pointSpread.map((ps, idx) => <option key={idx} value={ps}>{ps}</option>)}
-        </select>
-      )}
-      <select
-        className={`border rounded p-1 w-full mt-2 ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
-        value={selectedTeams[game.id] || ""}
-        onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
-        disabled={inputsDisabled}
-      >
-        <option value="">-- Select Team --</option>
-        {game.teams.map((team) => <option key={team} value={team}>{team}</option>)}
-      </select>
-    </div>
-  ))}
+{/* ===== MOBILE CARDS ===== */}
+<div className="md:hidden space-y-4">
+  {(() => {
+    // Compute last Thu/Fri/Sat index
+    const lastFirstIndex = Math.max(
+      ...games.map((g, idx) => (["Thu", "Fri", "Sat"].includes(g.day) ? idx : -1))
+    );
 
+    return games.map((game, idx) => {
+      const locked = isFirstSubmitGame(game) ? firstLocked : secondLocked;
+
+      return (
+        <React.Fragment key={game.id}>
+          {/* Game card */}
+          <div className="bg-white p-3 rounded shadow">
+            <div className="font-semibold">{game.teams[0]} at {game.teams[1]}</div>
+            <div>Day: {game.day}</div>
+
+            {/* Drive-By toggle */}
+            {DBToggle(game, locked)}
+
+            {/* Point Spread select */}
+            {game.pointSpread?.length > 0 && (
+              <select
+                className={`border rounded p-1 w-full mt-2 ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
+                value={pointSpreadSelection[game.id] || ""}
+                onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
+                disabled={locked}
+              >
+                <option value="">-- Select Point Spread --</option>
+                {game.pointSpread.map((ps, psIdx) => (
+                  <React.Fragment key={psIdx}>
+                    <option value={`${game.teams[0]} ${ps >= 0 ? "+" : ""}${ps}`}>
+                      {game.teams[0]} {ps >= 0 ? "+" : ""}{ps}
+                    </option>
+                    <option value={`${game.teams[1]} ${ps <= 0 ? "+" : ""}${-ps}`}>
+                      {game.teams[1]} {ps <= 0 ? "+" : ""}{-ps}
+                    </option>
+                  </React.Fragment>
+                ))}
+              </select>
+            )}
+
+            {/* Team selection */}
+            <select
+              className={`border rounded p-1 w-full mt-2 ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
+              value={selectedTeams[game.id] || ""}
+              onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
+              disabled={locked}
+            >
+              <option value="">-- Select Team --</option>
+              {game.teams.map((team) => (
+                <option key={team} value={team}>{team}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Insert Submit First Game(s) card after last Thu/Fri/Sat */}
+          {idx === lastFirstIndex && (
+            <div className="bg-white p-3 rounded shadow flex flex-col gap-3">
+              <span className="font-semibold">{timeFirst || "Kickoff time TBD"}</span>
+              <button
+                onClick={onSubmitFirst}
+                disabled={firstLocked}
+                className={`w-full px-4 py-2 rounded font-semibold text-white transition
+                  ${firstLocked ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600 active:bg-green-700"}`}
+              >
+                Submit First Game(s)
+              </button>
+            </div>
+          )}
+        </React.Fragment>
+      );
+    });
+  })()}
+
+  {/* Survivor card */}
   {!survivorLost && (
     <div className="bg-white p-3 rounded shadow">
       <div className="font-semibold">Survivor Pick:</div>
       <select
-        className={`border rounded p-1 w-full mt-2 ${survivorPick ? "bg-yellow-200" : ""}`}
+        className={`border rounded p-1 w-full mt-2 ${survivorPick ? "bg-yellow-200" : ""} ${secondLocked ? "opacity-60" : ""}`}
         value={survivorPick}
         onChange={(e) => setSurvivorPick(e.target.value)}
-        disabled={inputsDisabled}
+        disabled={secondLocked}
       >
         <option value="">-- Select Team --</option>
         {allTeams.map((team) => (
@@ -295,20 +759,40 @@ export default function WeeklyPicksPage() {
             {team} {pickedTeams.includes(team) ? "(used)" : ""}
           </option>
         ))}
-
       </select>
+    </div>
+  )}
+
+  {/* Submit #2 (timer + button) */}
+  {games.length > 1 && (
+    <div className="bg-white p-3 rounded shadow flex flex-col gap-3">
+      <span className="font-semibold">{timeSecond || "Kickoff time TBD"}</span>
+      <button
+        onClick={onSubmitSecond}
+        disabled={secondLocked}
+        className={`w-full px-4 py-2 rounded font-semibold text-white transition
+          ${secondLocked ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 active:bg-blue-700"}`}
+      >
+        Submit Rest of Picks
+      </button>
     </div>
   )}
 </div>
 
 
-        <button
-          className={`mt-4 px-4 py-2 rounded bg-green-500 text-white font-semibold ${canSubmit() ? "" : "opacity-50 cursor-not-allowed"}`}
-          onClick={handleSubmit}
-          disabled={!canSubmit()}
-        >
-          Submit Picks
-        </button>
+
+
+        {/* Warning + Confirmation Modals */}
+        <WarningModal
+          isOpen={warnOpen}
+          messages={warnMessages}
+          onClose={() => setWarnOpen(false)}
+        />
+        <ConfirmationModal
+          isOpen={confirmOpen}
+          message={confirmMsg}
+          onClose={() => setConfirmOpen(false)}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 {
   "name": "jw-pickem",
+  "type": "module",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -10,7 +11,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.55.0",
+    "axios": "^1.11.0",
+    "dotenv": "^17.2.1",
+    "node-fetch": "^3.3.2",
     "react": "^18.3.1",
+    "react-countdown": "^2.3.6",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.8.1"
   },

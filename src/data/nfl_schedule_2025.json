@@ -13,9 +13,9 @@
           "Philadelphia Eagles"
         ],
         "day": "Friday",
-        "dbLabel": null,
-        "dbTeam": null,
-        "pointSpread": []
+        "dbLabel": "Dallas Cowboys",
+        "dbTeam": "Dallas Cowboys",
+        "pointSpread": ["Philadelphia -3.5", "Dallas +3.5"]
       },
       {
         "id": 2,
