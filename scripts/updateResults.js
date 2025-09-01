@@ -45,7 +45,7 @@ async function fetchResults(week, seasonType) {
 
 // 2. Upsert results into game_results and weekly_games
 async function upsertResults(results) {
-  // Upsert game_results
+  // Upsert game_results safely
   const { error: grError } = await supabase.from("game_results").upsert(
     results.map((r) => ({
       game_id: r.game_id,
@@ -55,12 +55,13 @@ async function upsertResults(results) {
       winner: r.winner,
       db_team: r.db_team,
       correct_spread: r.correct_spread,
-    }))
+    })),
+    { onConflict: ["week", "game_id"] } // <-- replaces duplicates
   );
   if (grError) console.error("Supabase insert error (game_results):", grError);
   else console.log(`✅ Upserted ${results.length} game results`);
 
-  // Upsert weekly_games
+  // Upsert weekly_games safely
   for (const game of results) {
     const competition = game.competitionData;
     if (!competition) continue;
@@ -70,7 +71,6 @@ async function upsertResults(results) {
       ? new Date(kickoffUtc).toLocaleDateString("en-US", { weekday: "long" })
       : null;
 
-    // Skip invalid matchups
     if (!game.home_team || !game.away_team) {
       console.warn(
         `⚠️ Skipping invalid matchup: ${game.home_team} vs ${game.away_team}`
@@ -80,7 +80,7 @@ async function upsertResults(results) {
 
     const { error: wgError } = await supabase.from("weekly_games").upsert(
       {
-        week_number: week,
+        week_number: game.week,
         teams: [game.home_team, game.away_team],
         day: day,
         kickoff_utc: kickoffUtc,
@@ -88,10 +88,9 @@ async function upsertResults(results) {
         db_team: null,
         point_spread: null,
       },
-      {
-        onConflict: ["week_number", "teams"],
-      }
+      { onConflict: ["week_number", "teams"] } // <-- replaces duplicates
     );
+
     if (wgError)
       console.error(
         `Supabase error upserting weekly_games for ${game.home_team} vs ${game.away_team}:`,
@@ -99,6 +98,7 @@ async function upsertResults(results) {
       );
   }
 }
+
 
 // 3. Run weekly compute function (RPC)
 async function computeWeeklyResults(week) {
@@ -146,9 +146,16 @@ async function resolveSurvivor(week) {
 async function runPipeline() {
   console.log(`🚀 Starting update pipeline for week ${week}, seasonType ${seasonType}`);
 
+  // ✅ Step 1: Fetch results
   const results = await fetchResults(week, seasonType);
+
+  // ✅ Step 2: Upsert results
   await upsertResults(results);
+
+  // ✅ Step 3: Compute weekly points (added)
   await computeWeeklyResults(week);
+
+  // ✅ Step 4: Resolve survivor picks
   await resolveSurvivor(week);
 
   console.log("🎉 End-of-week pipeline complete");

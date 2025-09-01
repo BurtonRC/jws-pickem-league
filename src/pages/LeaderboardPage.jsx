@@ -6,29 +6,66 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
-      const { data, error } = await supabase
+      // ✅ Step 1: Fetch weekly_results
+      const { data: results, error: resultsError } = await supabase
         .from("weekly_results")
-        .select("week, this_week_score, prev_week_score, overall_score, total_drive_bys, total_point_spreads, profiles(username)")
+        .select("*")
         .order("week");
 
-      if (error) {
-        console.error("Error fetching leaderboard:", error);
+      if (resultsError) {
+        console.error("Error fetching weekly_results:", resultsError);
         return;
       }
 
-      // Group results per user
+      // ✅ Step 2: Fetch profiles separately
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, username");
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        return;
+      }
+
+      // ✅ Step 3: Merge username into results
+      const mergedData = results.map(row => ({
+        ...row,
+        username: profiles.find(p => p.id === row.user_id)?.username || "Unknown"
+      }));
+
+      // ✅ Step 4: Group results per user
       const grouped = {};
-      data.forEach((row) => {
-        const user = row.profiles?.username || "Unknown";
+      mergedData.forEach((row) => {
+        const user = row.username;
         if (!grouped[user]) grouped[user] = { user_name: user, weeks: [] };
+
         grouped[user].weeks[row.week - 1] = {
-          normal: row.this_week_score, // your schema can split this if needed
-          db: row.total_drive_bys,
-          ps: row.total_point_spreads,
+          normal: row.this_week_score || 0,
+          db: row.total_drive_bys || 0,
+          ps: row.total_point_spreads || 0,
         };
       });
 
-      setUsers(Object.values(grouped));
+      // ✅ Step 5: Compute totals per user (normal + DB + PS)
+      Object.values(grouped).forEach(user => {
+        let total = 0, totalDB = 0, totalPS = 0;
+        user.weeks.forEach(week => {
+          const normal = week.normal || 0;
+          const db = week.db || 0;
+          const ps = week.ps || 0;
+          total += normal + db + ps;
+          totalDB += db;
+          totalPS += ps;
+        });
+        user.total = total;
+        user.totalDB = totalDB;
+        user.totalPS = totalPS;
+      });
+
+      // ✅ Step 6: Sort users descending by total points
+      const sortedUsers = Object.values(grouped).sort((a, b) => b.total - a.total);
+
+      setUsers(sortedUsers);
     };
 
     fetchLeaderboard();
@@ -40,36 +77,57 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="w-full md:w-[90%] max-w-5xl mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-4">Leaderboard</h1>
-        <table className="w-full border-collapse text-center">
+    <div className="min-h-screen bg-gray-50 py-4 px-1 sm:px-6 md:px-8">
+      <div className="w-full max-w-5xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-center md:text-left">
+          Leaderboard
+        </h1>
+
+        <table className="w-full table-fixed border-collapse text-center text-sm sm:text-base">
           <thead>
-            <tr className="bg-gray-100">
-              <th className="p-3 border-b">User</th>
-              <th className="p-3 border-b">Prev Week Score</th>
-              <th className="p-3 border-b">This Week Score</th>
-              <th className="p-3 border-b">Total</th>
-              <th className="p-3 border-b">DB</th>
-              <th className="p-3 border-b">PS</th>
+            <tr className="bg-gray-100 sticky top-0 z-10">
+              <th className="p-3 border-b w-2/6 text-left font-semibold uppercase tracking-wide text-sm sm:text-base">
+                User
+              </th>
+              <th className="p-3 border-b w-1/6 text-right font-semibold uppercase tracking-wide text-sm sm:text-base">
+                Prev Week
+              </th>
+              <th className="p-3 border-b w-1/6 text-right font-semibold uppercase tracking-wide text-sm sm:text-base">
+                This Week
+              </th>
+              <th className="p-3 border-b w-1/6 text-right font-semibold uppercase tracking-wide text-sm sm:text-base">
+                Total
+              </th>
+              <th className="p-3 border-b w-1/12 text-right font-semibold uppercase tracking-wide text-sm sm:text-base">
+                DB
+              </th>
+              <th className="p-3 border-b w-2/6 text-right font-semibold uppercase tracking-wide text-sm sm:text-base">
+                PS
+              </th>
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => {
+            {users.map((user, index) => {
               const prevWeek = user.weeks[user.weeks.length - 2] || { normal: 0, db: 0, ps: 0 };
               const thisWeek = user.weeks[user.weeks.length - 1] || { normal: 0, db: 0, ps: 0 };
-              const total = user.weeks.reduce((sum, week) => sum + week.normal + week.db + week.ps, 0);
-              const totalDB = user.weeks.reduce((sum, week) => sum + week.db, 0);
-              const totalPS = user.weeks.reduce((sum, week) => sum + week.ps, 0);
+
+              // ✅ Optional: Highlight top 3 users
+              let bgColor = index % 2 === 0 ? "bg-white" : "bg-gray-50";
+              if (index === 0) bgColor = "bg-[#e5ca3b96] text-black";   // 1st place (gold)
+              if (index === 1) bgColor = "bg-[#ebeaea] text-black";   // 2nd place (silver)
+              if (index === 2) bgColor = "bg-[#c9a98a9c] text-black";   // 3rd place (bronze)
 
               return (
-                <tr key={user.user_name} className="border-b">
-                  <td className="p-3">{user.user_name}</td>
-                  <td className="p-3">{renderWeekTotal(prevWeek)}</td>
-                  <td className="p-3">{renderWeekTotal(thisWeek)}</td>
-                  <td className="p-3">{total}</td>
-                  <td className="p-3">{totalDB}</td>
-                  <td className="p-3">{totalPS}</td>
+                <tr
+                  key={user.user_name}
+                  className={`${bgColor} border-b hover:bg-gray-200 transition-colors duration-200`}
+                >
+                  <td className="p-2 sm:p-3 text-left truncate">{user.user_name}</td>
+                  <td className="p-2 sm:p-3 text-right">{renderWeekTotal(prevWeek)}</td>
+                  <td className="p-2 sm:p-3 text-right">{renderWeekTotal(thisWeek)}</td>
+                  <td className="p-2 sm:p-3 text-right">{user.total}</td>
+                  <td className="p-2 sm:p-3 text-right">{user.totalDB}</td>
+                  <td className="p-2 sm:p-3 text-right">{user.totalPS}</td>
                 </tr>
               );
             })}

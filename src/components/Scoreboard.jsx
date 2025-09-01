@@ -86,7 +86,7 @@ export default function Scoreboard({ collapsed }) {
       style={{ backgroundColor: "#f1f2f3" }}
     >
       <div
-        className="w-full md:max-w-[70%] mx-auto px-2 md:px-4 flex items-stretch relative"
+        className="w-full md:max-w-[1230px] mx-auto px-2 md:px-4 flex items-stretch relative"
         style={{ height: "80px" }}
       >
         {/* Left controls: Week dropdown + Left arrow */}

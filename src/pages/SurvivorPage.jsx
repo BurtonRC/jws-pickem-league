@@ -2,16 +2,9 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 
 export default function SurvivorPage() {
-  const mockSurvivorData = {
-    Alice: { 1: "Green Bay Packers", 2: "Buffalo Bills", 3: "Philadelphia Eagles" },
-    Bob: { 1: "Dallas Cowboys", 2: "Kansas City Chiefs", 3: "San Francisco 49ers", 4: "Miami Dolphins" },
-    Charlie: { 1: "Chicago Bears", 2: "New York Giants" }
-  };
-
   const [survivorData, setSurvivorData] = useState({});
   const [maxWeek, setMaxWeek] = useState(1);
   const [teamLogos, setTeamLogos] = useState({});
-  const [useMock, setUseMock] = useState(true); // toggle for testing
 
   // ✅ Load team logos from public/teamLogos.json
   useEffect(() => {
@@ -21,48 +14,60 @@ export default function SurvivorPage() {
       .catch((err) => console.error("Error loading team logos:", err));
   }, []);
 
-  useEffect(() => {
-    if (useMock) {
-      setSurvivorData(mockSurvivorData);
-      const maxMockWeek = Math.max(
-        ...Object.values(mockSurvivorData).flatMap((picks) =>
-          Object.keys(picks).map(Number)
-        )
-      );
-      setMaxWeek(maxMockWeek);
+  // ✅ Fetch survivor picks from Supabase
+useEffect(() => {
+  const fetchSurvivorData = async () => {
+    // ✅ fetch survivor picks without joining profiles
+    const { data: picks, error } = await supabase
+      .from("survivor_picks")
+      .select("user_id, week, team, result")
+      .order("week");
+
+    if (error) {
+      console.error("Error fetching survivor picks:", error);
       return;
     }
 
-    const fetchSurvivorData = async () => {
-      const { data, error } = await supabase
-        .from("survivor_picks")
-        .select("user_id, week, team, profiles(username)")
-        .order("week");
+    // ✅ fetch profiles separately
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, username");
 
-      if (error) {
-        console.error("Error fetching survivor picks:", error);
-        return;
-      }
+    if (profilesError) {
+      console.error("Error fetching profiles:", profilesError);
+      return;
+    }
 
-      const grouped = {};
-      let maxWeekFound = 1;
+    // ✅ merge username into survivor picks
+    const grouped = {};
+    let maxWeekFound = 1;
 
-      data.forEach((pick) => {
-        const user = pick.profiles?.username || "Unknown";
-        if (!grouped[user]) grouped[user] = {};
-        grouped[user][pick.week] = pick.team;
-        if (pick.week > maxWeekFound) maxWeekFound = pick.week;
-      });
+    picks.forEach((pick) => {
+      const user = profiles.find((p) => p.id === pick.user_id)?.username || "Unknown";
+      if (!grouped[user]) grouped[user] = {};
+      grouped[user][pick.week] = {
+        team: pick.team,
+        result: pick.result
+      };
+      if (pick.week > maxWeekFound) maxWeekFound = pick.week;
+    });
 
-      setSurvivorData(grouped);
-      setMaxWeek(maxWeekFound);
-    };
+    setSurvivorData(grouped);
+    setMaxWeek(maxWeekFound);
+  };
 
-    fetchSurvivorData();
-  }, [useMock]);
+  fetchSurvivorData();
+}, []);
+
 
   if (!survivorData || Object.keys(survivorData).length === 0) {
-    return <div className="p-6">No survivor picks yet.</div>;
+    return (
+      <div className="flex flex-col items-center justify-start pt-40 bg-gray-50 min-h-screen">
+        <p className="text-xl font-semibold text-gray-700">
+          No survivor picks yet.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -87,20 +92,29 @@ export default function SurvivorPage() {
                 <td className="p-2 font-semibold text-center">{user}</td>
                 {Array.from({ length: maxWeek }, (_, i) => {
                   const weekNum = i + 1;
-                  const team = picks[weekNum];
+                  const pick = picks[weekNum];
+
+                  // ✅ Only show picks that are resolved ('win' or 'loss')
+                  if (!pick || pick.result === "pending")
+                    return <td key={weekNum} className="p-2 text-center" />;
+
+                  const { team, result } = pick;
                   const logo = team ? teamLogos[team] : null;
+
+                  // Dim only the losing pick
+                  const isDimmed = result === "loss";
+
                   return (
                     <td key={weekNum} className="p-2 text-center">
                       {logo ? (
                         <img
                           src={`${import.meta.env.BASE_URL}${logo}`}
                           alt={team}
-                          className="w-12 h-12 mx-auto"
+                          className={`w-12 h-12 mx-auto ${isDimmed ? "opacity-20" : ""}`}
                         />
                       ) : (
                         team || ""
                       )}
-
                     </td>
                   );
                 })}

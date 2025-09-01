@@ -60,81 +60,130 @@ export default function WeeklyPicksPage() {
   // Helper: determine if a game is in the first submit group (Thu-Fri-Sat)
   const isFirstSubmitGame = (game) => ["Thu", "Fri", "Sat"].includes(game.day);
 
+  // ------------------------------
+  // TESTING:
+  // Toggle between Supabase test week (true) and live ESPN schedule (false)
+  const useSupabaseGames = false; // <-- set false to go back to normal
+  const testWeekNumber = 3;      // test week for Supabase
+  const testSeasonType = 1;      // preseason = 1
 
-// Fetch ESPN schedule dynamically
+  // ------------------------------
+  // TESTING: bypass kickoff locks
+  const TEST_SUBMIT_ANYTIME = false; // set to false when done testing
+  // ------------------------------
+
+
+
+
+// Fetch ESPN schedule dynamically or load Supabase test week
 useEffect(() => {
   const fetchWeekGames = async () => {
-    console.log("Fetching ESPN schedule...");
+    console.log("Fetching schedule...");
+
     try {
-      const res = await fetch(
-        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard`
-      );
-      const data = await res.json();
+      let weekGames = [];
+      let weekObj = { weekNumber: 1 }; // default
 
-      console.log("ESPN raw events:", data.events, "Week:", data.season?.week);
+      // ------------------- CONFIG: TEST MODE -------------------
+      const useSupabaseGames = false; // <-- set false to go back to live ESPN
+      const testWeekNumber = 3;      // test week for Supabase
+      // ---------------------------------------------------------
 
-      // Determine current week based on today (Canada UTC)
-      const today = new Date();
-      const weekObj = { weekNumber: data.season?.week || 1 };
+      if (useSupabaseGames) {
+        // ---- Load test week games from Supabase ----
+        const { data, error } = await supabase
+          .from("weekly_games")
+          .select("*")
+          .eq("week_number", testWeekNumber)
+          .order("kickoff_utc");
 
-      // Map ESPN games into your expected structure
-      const weekGames = data.events.map((game, idx) => {
-        const g = game;
-        const matchup = g.name.split(" at ");
-        return {
+        if (error) throw error;
+
+        weekGames = data.map((g) => ({
           id: g.id,
-          teams: matchup,
-          dbTeam: "", // will be injected next
-          dbLabel: "", // will be injected next
-          pointSpread: [], // will be injected next
-          day: new Date(g.date).toLocaleString("en-US", {
-            weekday: "short",
-            timeZone: "UTC",
-          }),
-          kickoffUTC: g.date,
-        };
-      });
+          teams: g.teams,      // should be stored as array in weekly_games
+          day: g.day,
+          kickoffUTC: g.kickoff_utc,
+          dbTeam: g.db_team || "",
+          dbLabel: g.db_label || "",
+          pointSpread: g.point_spread || [],
+        }));
 
-      // ---- Overlay your manual DB teams and point spreads ----
+        weekObj = { weekNumber: testWeekNumber };
+        console.log("Loaded test week games from Supabase:", weekGames);
 
-      const weekGamesWithConfig = weekGames.map((game) => {
-        const gameIdStr = String(game.id);
+      } else {
+        // ---- Fetch live ESPN games ----
+        console.log("Fetching ESPN schedule...");
+        const res = await fetch(
+          `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard`
+        );
+        const data = await res.json();
 
-        const dbTeam = leagueConfig.driveByGames[gameIdStr] || "";
-        const dbLabel = dbTeam ? "DB" : "";
-        const ps = leagueConfig.pointSpreads[gameIdStr] || [];
+        console.log("ESPN raw events:", data.events, "Week:", data.season?.week);
 
-        console.log(`Game ID: ${game.id}`, "Teams:", game.teams, "DB Team:", dbTeam, "Label:", dbLabel, "PS:", ps);
+        // Determine current week based on today (Canada UTC)
+        const today = new Date();
+        weekObj = { weekNumber: data.season?.week || 1 };
 
-        return {
-          ...game,
-          dbTeam,
-          dbLabel,
-          pointSpread: ps
-        };
-      });
+        // Map ESPN games into your expected structure
+        weekGames = data.events.map((game, idx) => {
+          const g = game;
+          const matchup = g.name.split(" at ");
+          return {
+            id: g.id,
+            teams: matchup,
+            dbTeam: "", // will be injected next
+            dbLabel: "", // will be injected next
+            pointSpread: [], // will be injected next
+            day: new Date(g.date).toLocaleString("en-US", {
+              weekday: "short",
+              timeZone: "UTC",
+            }),
+            kickoffUTC: g.date,
+          };
+        });
 
-      console.log("Mapped games with config:", weekGamesWithConfig);
+        // ---- Overlay your manual DB teams and point spreads ----
+        weekGames = weekGames.map((game) => {
+          const gameIdStr = String(game.id);
 
+          const dbTeam = leagueConfig.driveByGames[gameIdStr] || "";
+          const dbLabel = dbTeam ? "DB" : "";
+          const ps = leagueConfig.pointSpreads[gameIdStr] || [];
+
+          console.log(`Game ID: ${game.id}`, "Teams:", game.teams, "DB Team:", dbTeam, "Label:", dbLabel, "PS:", ps);
+
+          return {
+            ...game,
+            dbTeam,
+            dbLabel,
+            pointSpread: ps
+          };
+        });
+      }
+
+      // ---- Set state ----
       setCurrentWeek(weekObj);
-      setGames(weekGamesWithConfig);
-
+      setGames(weekGames);
 
       // Extract all teams
       setAllTeams(
         Array.from(
           new Set(
-            weekGamesWithConfig.flatMap((game) => game.teams)
+            weekGames.flatMap((game) => game.teams)
           )
         )
       );
+
     } catch (err) {
-      console.error("Failed to fetch NFL schedule:", err);
+      console.error("Failed to fetch/load NFL schedule:", err);
     }
   };
 
   fetchWeekGames();
 }, []);
+
 
 useEffect(() => {
   // Initialize sliderOn based on selectedTeams
@@ -198,10 +247,10 @@ useEffect(() => {
   // Disable logic per section
   const now = new Date();
   
-  const firstLocked = submittedFirst || (firstKickoff ? now >= firstKickoff : false);
+  const firstLocked = submittedFirst || (TEST_SUBMIT_ANYTIME ? false : (firstKickoff ? now >= firstKickoff : true));
+  
+  const secondLocked = submittedSecond || (TEST_SUBMIT_ANYTIME ? false : (secondKickoff ? now >= secondKickoff : true));
 
-  const secondLocked =
-    submittedSecond || (secondKickoff ? now >= secondKickoff : false);
 
   // Handlers
   const toggleSlider = (id, checked, dbTeam) => {

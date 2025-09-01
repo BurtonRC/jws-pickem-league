@@ -12,15 +12,19 @@ import WednesdayReportsPage from './pages/WednesdayReportsPage';
 import PaymentsPage from './pages/PaymentsPage';
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import UpdatePassword from './pages/UpdatePassword';
 
 export default function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
+    // Check session on load
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
 
+    // Listen for auth changes (login/logout)
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -46,9 +50,10 @@ export default function App() {
         element={user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />}
       />
 
-      {/* Auth pages */}
+      {/* Auth pages (no MainLayout) */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
       {/* Pages with MainLayout (Scoreboard + Navbar + Page Content) */}
       <Route
@@ -59,7 +64,7 @@ export default function App() {
               <HomePage />
             </MainLayout>
           ) : (
-            <Navigate to="/login" />
+            <Navigate to="/login" replace />
           )
         }
       />
@@ -71,7 +76,7 @@ export default function App() {
               <WeeklyPicksPage />
             </MainLayout>
           ) : (
-            <Navigate to="/login" />
+            <Navigate to="/login" replace />
           )
         }
       />
@@ -83,7 +88,7 @@ export default function App() {
               <LeaderboardPage />
             </MainLayout>
           ) : (
-            <Navigate to="/login" />
+            <Navigate to="/login" replace />
           )
         }
       />
@@ -95,7 +100,7 @@ export default function App() {
               <SurvivorPage />
             </MainLayout>
           ) : (
-            <Navigate to="/login" />
+            <Navigate to="/login" replace />
           )
         }
       />
@@ -107,7 +112,7 @@ export default function App() {
               <WednesdayReportsPage />
             </MainLayout>
           ) : (
-            <Navigate to="/login" />
+            <Navigate to="/login" replace />
           )
         }
       />
@@ -119,10 +124,14 @@ export default function App() {
               <PaymentsPage />
             </MainLayout>
           ) : (
-            <Navigate to="/login" />
+            <Navigate to="/login" replace />
           )
         }
       />
+
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/update-password" element={<UpdatePassword />} />
+
 
       {/* Catch-all redirect */}
       <Route
