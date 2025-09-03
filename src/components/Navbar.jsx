@@ -22,7 +22,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
     <nav className="w-full bg-gray-900 text-white shadow z-50">
       <div
           className="w-full max-w-[1230px] mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8"
-          style={{ height: "56px" }}
+          style={{ height: "50px" }}
         >
 
         {/* Left: logo + nav links */}

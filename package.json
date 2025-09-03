@@ -1,6 +1,5 @@
 {
   "name": "jw-pickem",
-  "type": "module",
   "version": "0.0.0",
   "homepage": ".",
   "private": true,
@@ -8,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "vite build && gh-pages -d dist"
+    "predeploy": "vite build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.55.0",
@@ -22,12 +22,23 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.12",
     "@vitejs/plugin-react": "^4.2.0",
     "autoprefixer": "^10.4.21",
-    "gh-pages": "^6.1.1",
+    "gh-pages": "^6.3.0",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.12",
+    "tailwindcss": "^3.4.17",
     "vite": "^5.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
