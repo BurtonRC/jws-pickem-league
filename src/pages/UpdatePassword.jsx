@@ -9,16 +9,21 @@ export default function UpdatePassword() {
   const logoPath = `${import.meta.env.BASE_URL}images/pickem-logo.png`;
 
   useEffect(() => {
-    // Extract access_token from hash
+    // Extract access_token from query string (after #/update-password?access_token=...)
     const hash = window.location.hash.substring(1); // remove #
-    const params = new URLSearchParams(hash);
+    const [path, query] = hash.split("?");
+    const params = new URLSearchParams(query);
     const token = params.get("access_token");
 
     if (!token) {
       setMessage("Invalid or expired link.");
     } else {
       setAccessToken(token);
-      supabase.auth.setSession({ access_token: token });
+
+      // Set session once for Supabase
+      supabase.auth.setSession({ access_token: token }).catch((err) => {
+        console.error("Error setting session:", err);
+      });
     }
   }, []);
 

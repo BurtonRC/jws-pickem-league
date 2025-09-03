@@ -136,8 +136,15 @@ export default function App() {
       {/* Catch-all redirect */}
       <Route
         path="*"
-        element={user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />}
+        element={
+          window.location.hash.includes("access_token")
+            ? <UpdatePassword />
+            : user
+            ? <Navigate to="/home" replace />
+            : <Navigate to="/login" replace />
+        }
       />
+
     </Routes>
   );
 }
