@@ -39,7 +39,18 @@ export default function UpdatePassword() {
         onSubmit={handleUpdate}
         className="bg-white p-8 rounded shadow-md w-full max-w-sm space-y-4"
       >
-        {message && <p className="text-red-500">{message}</p>}
+        {message && (
+          <p
+            className={
+              message.includes("successfully")
+                ? "text-green-600"
+                : "text-red-500"
+            }
+          >
+            {message}
+          </p>
+        )}
+
         <input
           type="password"
           placeholder="New password"
