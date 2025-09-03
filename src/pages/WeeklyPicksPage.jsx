@@ -113,54 +113,59 @@ useEffect(() => {
         console.log("Loaded test week games from Supabase:", weekGames);
 
       } else {
-        // ---- Fetch live ESPN games ----
-        console.log("Fetching ESPN schedule...");
-        const res = await fetch(
-          `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard`
-        );
-        const data = await res.json();
+// ---- Fetch live ESPN games ----
+console.log("Fetching ESPN schedule...");
+const res = await fetch(
+  `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard`
+);
+const data = await res.json();
 
-        console.log("ESPN raw events:", data.events, "Week:", data.season?.week);
+console.log("ESPN raw events:", data.events, "Week:", data.season?.week);
 
-        // Determine current week based on today (Canada UTC)
-        const today = new Date();
-        weekObj = { weekNumber: data.season?.week || 1 };
+weekObj = { weekNumber: data.season?.week || 1 };
 
-        // Map ESPN games into your expected structure
-        weekGames = data.events.map((game, idx) => {
-          const g = game;
-          const matchup = g.name.split(" at ");
-          return {
-            id: g.id,
-            teams: matchup,
-            dbTeam: "", // will be injected next
-            dbLabel: "", // will be injected next
-            pointSpread: [], // will be injected next
-            day: new Date(g.date).toLocaleString("en-US", {
-              weekday: "short",
-              timeZone: "UTC",
-            }),
-            kickoffUTC: g.date,
-          };
-        });
+// Map ESPN games into your expected structure
+weekGames = data.events.map((game) => {
+  const matchup = game.name.split(" at ");
+  const kickoffUTC = new Date(game.date);
 
-        // ---- Overlay your manual DB teams and point spreads ----
-        weekGames = weekGames.map((game) => {
-          const gameIdStr = String(game.id);
+  // Determine local day for each user based on their browser timezone
+  const day = kickoffUTC.toLocaleString("en-US", { weekday: "short" });
 
-          const dbTeam = leagueConfig.driveByGames[gameIdStr] || "";
-          const dbLabel = dbTeam ? "DB" : "";
-          const ps = leagueConfig.pointSpreads[gameIdStr] || [];
+  return {
+    id: game.id,
+    teams: matchup,
+    dbTeam: "",       // will be injected next
+    dbLabel: "",      // will be injected next
+    pointSpread: [],  // will be injected next
+    day,              // keep for first/second submit
+    kickoffUTC: kickoffUTC.toISOString(), // keep UTC for countdown timers
+  };
+});
 
-          console.log(`Game ID: ${game.id}`, "Teams:", game.teams, "DB Team:", dbTeam, "Label:", dbLabel, "PS:", ps);
+// ---- Overlay your manual DB teams and point spreads ----
+weekGames = weekGames.map((game) => {
+  const gameIdStr = String(game.id);
+  const dbTeam = leagueConfig.driveByGames[gameIdStr] || "";
+  const dbLabel = dbTeam ? "DB" : "";
+  const ps = leagueConfig.pointSpreads[gameIdStr] || [];
 
-          return {
-            ...game,
-            dbTeam,
-            dbLabel,
-            pointSpread: ps
-          };
-        });
+  console.log(`Game ID: ${game.id}`, "Teams:", game.teams, "DB Team:", dbTeam, "Label:", dbLabel, "PS:", ps);
+
+  return {
+    ...game,
+    dbTeam,
+    dbLabel,
+    pointSpread: ps
+  };
+});
+
+
+
+
+
+
+
       }
 
       // ---- Set state ----
@@ -247,9 +252,9 @@ useEffect(() => {
   // Disable logic per section
   const now = new Date();
   
-  const firstLocked = submittedFirst || (TEST_SUBMIT_ANYTIME ? false : (firstKickoff ? now >= firstKickoff : true));
+  const firstLocked = submittedFirst || (false ? false : (firstKickoff ? now >= firstKickoff : true));
   
-  const secondLocked = submittedSecond || (TEST_SUBMIT_ANYTIME ? false : (secondKickoff ? now >= secondKickoff : true));
+  const secondLocked = submittedSecond || (false ? false : (secondKickoff ? now >= secondKickoff : true));
 
 
   // Handlers
@@ -351,11 +356,12 @@ const loadExistingPicks = async () => {
 
     // Fetch weekly picks
     const { data: existingData, error: fetchError } = await supabase
-      .from("weekly_picks")
-      .select("picks, point_spreads, dbs")
-      .eq("user_id", user.id)
-      .eq("week", weekNum)
-      .single();
+  .from("weekly_picks")
+  .select("picks, point_spreads, dbs")
+  .eq("user_id", user.id)
+  .eq("week", weekNum)
+  .maybeSingle(); // <-- does not throw if row is missing
+
 
     if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
@@ -366,11 +372,12 @@ const loadExistingPicks = async () => {
 
     // Fetch survivor pick separately
     const { data: survivorData } = await supabase
-      .from("survivor_picks")
-      .select("team")
-      .eq("user_id", user.id)
-      .eq("week", weekNum)
-      .single();
+  .from("survivor_picks")
+  .select("team")
+  .eq("user_id", user.id)
+  .eq("week", weekNum)
+  .maybeSingle(); // <-- safe if row missing
+
 
     setSurvivorPick(survivorData?.team || "");
 
@@ -483,6 +490,26 @@ const onSubmitFirst = async () => {
 
   try {
     await saveToSupabase(); // Use central save function
+
+// 2️⃣ Get logged-in user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) throw new Error("User email not found");
+
+    // 3️⃣ Call your backend API to send the email
+    await fetch("/api/sendWeeklyPicks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        picks: selectedTeams,
+        pointSpreads: pointSpreadSelection,
+        dbs: DBs,
+        week: currentWeek.weekNumber,
+        userEmail: user.email  // ✅ automatically uses the current user's email
+      })
+    });
+
+
+
     setSubmittedFirst(true);
     setConfirmMsg("First game pick submitted successfully.");
     setConfirmOpen(true);
@@ -506,6 +533,25 @@ const onSubmitSecond = async () => {
 
   try {
     await saveToSupabase(); // Use central save function
+
+// 2️⃣ Get logged-in user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) throw new Error("User email not found");
+
+    // 3️⃣ Call your backend API to send the email
+    await fetch("/api/sendWeeklyPicks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        picks: selectedTeams,
+        pointSpreads: pointSpreadSelection,
+        dbs: DBs,
+        week: currentWeek.weekNumber,
+        userEmail: user.email  // ✅ automatically uses the current user's email
+      })
+    });
+
+
     setSubmittedSecond(true);
     setConfirmMsg("Rest of week picks submitted successfully.");
     setConfirmOpen(true);
@@ -547,6 +593,7 @@ const onSubmitSecond = async () => {
         "Los Angeles Chargers": "Los Angeles",
         "New York Giants": "New York",
         "New York Jets": "New York",
+        "New Orleans Saints": "New Orleans",
         // add all other teams as needed
       };
       return mapping[dbTeam] || dbTeam.split(" ")[0]; // fallback
@@ -589,7 +636,11 @@ const onSubmitSecond = async () => {
             <td className="p-3">{game.teams[0]} at {game.teams[1]}</td>
 
             {/* Day */}
-            <td className="p-3">{game.day}</td>
+            <td className="p-3">
+  {game.day /* e.g., "Thu", "Fri", "Sat" */}
+</td>
+
+
 
             {/* Drive-By toggle */}
             <td className="p-3">{DBToggle(game, locked)}</td>
@@ -727,7 +778,8 @@ const onSubmitSecond = async () => {
           {/* Game card */}
           <div className="bg-white p-3 rounded shadow">
             <div className="font-semibold">{game.teams[0]} at {game.teams[1]}</div>
-            <div>Day: {game.day}</div>
+            <div>Day: {game.localKickoffStr}</div>
+
 
             {/* Drive-By toggle */}
             {DBToggle(game, locked)}

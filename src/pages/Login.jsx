@@ -102,7 +102,7 @@ export default function Login() {
               Log In
             </button>
 
-            <p className="text-sm text-center mt-2">
+            {/*<p className="text-sm text-center mt-2">
               <button
                 type="button"
                 onClick={() => setShowReset(true)}
@@ -110,7 +110,7 @@ export default function Login() {
               >
                 Forgot Password?
               </button>
-            </p>
+            </p>*/}
 
             <p className="text-sm text-center">
               Don't have an account?{" "}
@@ -120,7 +120,7 @@ export default function Login() {
             </p>
           </form>
         ) : (
-          // --- Forgot Password Form ---
+        {/*  // --- Forgot Password Form ---
           <form onSubmit={handleResetPassword} className="space-y-4">
             {message && <p className="text-green-500 text-sm text-center">{message}</p>}
             {error && <p className="text-red-500 text-sm text-center">{error}</p>}
@@ -151,6 +151,7 @@ export default function Login() {
               </button>
             </p>
           </form>
+          */}
         )}
       </div>
     </div>

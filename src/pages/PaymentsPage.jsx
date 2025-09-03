@@ -65,52 +65,68 @@ export default function DynamicPaymentPage() {
     },
   ];
 
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="w-full md:w-[90%] max-w-5xl mx-auto p-6 space-y-4">
-        <div style={{ maxWidth: 600, margin: "auto", padding: "2rem", fontFamily: "sans-serif" }}>
-          <h1 style={{ textAlign: "center" }}>NFL Pick’em Entry Fee</h1>
-          <p style={{ textAlign: "center", padding: "30px 0px" }}>
-            Select your currency to pay the <strong>${CAD_ENTRY_FEE} CAD</strong> equivalent securely via Stripe.
-          </p>
-          <div
-            style={{
-              display: "grid",
-              gap: "1rem",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            }}
-          >
-            {payments.map(({ currency, amount, symbol, link, flag }) => (
-              <a
-                key={currency}
-                href={link}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "1rem",
-                  border: "1px solid #ddd",
-                  borderRadius: "10px",
-                  backgroundColor: "#f9f9f9",
-                  fontSize: "1.1rem",
-                  fontWeight: "bold",
-                  textDecoration: "none",
-                  color: "#000",
-                  transition: "background-color 0.2s ease-in-out",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#eef6ff")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#f9f9f9")}
-              >
-                <span style={{ fontSize: "1.5rem", marginRight: 10 }}>{flag}</span>
-                {symbol}
-                {amount} {currency}
-              </a>
-            ))}
+    <>
+      {/* 
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="w-full md:w-[90%] max-w-5xl mx-auto p-6 space-y-4">
+          <div style={{ maxWidth: 600, margin: "auto", padding: "2rem", fontFamily: "sans-serif" }}>
+            <h1 style={{ textAlign: "center" }}>NFL Pick’em Entry Fee</h1>
+            <p style={{ textAlign: "center", padding: "30px 0px" }}>
+              Select your currency to pay the <strong>${CAD_ENTRY_FEE} CAD</strong> equivalent securely via Stripe.
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gap: "1rem",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              }}
+            >
+              {payments.map(({ currency, amount, symbol, link, flag }) => (
+                <a
+                  key={currency}
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "1rem",
+                    border: "1px solid #ddd",
+                    borderRadius: "10px",
+                    backgroundColor: "#f9f9f9",
+                    fontSize: "1.1rem",
+                    fontWeight: "bold",
+                    textDecoration: "none",
+                    color: "#000",
+                    transition: "background-color 0.2s ease-in-out",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#eef6ff")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#f9f9f9")}
+                >
+                  <span style={{ fontSize: "1.5rem", marginRight: 10 }}>{flag}</span>
+                  {symbol}
+                  {amount} {currency}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      */}
+
+      {/* Replacement UI */}
+      <div className="min-h-screen flex flex-col items-center justify-start bg-gray-50 pt-24">
+  <h1 className="text-3xl font-bold text-gray-700 text-center">
+    Coming Soon
+  </h1>
+</div>
+
+
+
+    </>
   );
 }
+

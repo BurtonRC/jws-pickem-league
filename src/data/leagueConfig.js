@@ -1,14 +1,14 @@
 // data/leagueConfig.js
 export const driveByGames = {
   "401772510": "Dallas Cowboys",  // Game ID → DB team
-  "401772714": "Kansas City Chiefs",
-  "401772830": "Tampa Bay Buccaneers",
+  "401772718": "New Orleans Saints",
+  "401772829": "Cleveland Browns",
+  "401772827": "New York Giants",
+  "401772832": "Tennessee Titans",
   // add all other DB games for the week
 };
 
 export const pointSpreads = {
-  "401772510": [3.5],
-  "401772714": [-7.0],
-  "401772830": [6.0],
-  // add all other point spreads for the week
+  "401772722": [2.5]  // This will generate:
+  // "Green Bay -2.5" and "Detroit +2.5" in your dropdown automatically
 };

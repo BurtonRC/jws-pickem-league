@@ -15,8 +15,10 @@ export default function ForgotPassword() {
     try {
       // Use hash for redirect since we're using HashRouter
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-  redirectTo: "https://jwnflpickem.com/update-password" // <-- include /#/update-password
+  redirectTo: "https://jwnflpickem.com/update-password", // production URL
 });
+
+
 
 
 
