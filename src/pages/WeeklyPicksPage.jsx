@@ -203,58 +203,83 @@ useEffect(() => {
 
 
 
-  // Kickoff helpers
-  const firstKickoff = useMemo(() => {
-    const g0 = games[0];
-    if (g0?.kickoffUTC) return new Date(g0.kickoffUTC);
-    return null;
-  }, [games]);
+// ------------------------------
+// Kickoff helpers
+// ------------------------------
 
-  const secondKickoff = useMemo(() => {
-    const rest = games.slice(1);
-    const times = rest
-      .map((g) => (g.kickoffUTC ? new Date(g.kickoffUTC) : null))
-      .filter(Boolean);
-    if (times.length === 0) return null;
-    return new Date(Math.min(...times.map((d) => d.getTime())));
-  }, [games]);
+// Compute earliest kickoff for first submit group (Thu-Fri-Sat)
+const firstKickoff = useMemo(() => {
+  const firstGames = games.filter(g => ["Thu", "Fri", "Sat"].includes(g.day));
+  if (firstGames.length === 0) return null;
+  return new Date(Math.min(...firstGames.map(g => new Date(g.kickoffUTC).getTime())));
+}, [games]);
 
-  // Countdown effect
-  useEffect(() => {
-    const setup = (kickoff, setStr) => {
-      if (!kickoff) {
-        setStr("Kickoff time TBD");
-        return () => {};
+// Compute earliest kickoff for second submit group (the rest)
+const secondKickoff = useMemo(() => {
+  const secondGames = games.filter(g => !["Thu", "Fri", "Sat"].includes(g.day));
+  if (secondGames.length === 0) return null;
+  return new Date(Math.min(...secondGames.map(g => new Date(g.kickoffUTC).getTime())));
+}, [games]);
+
+// ------------------------------
+// Countdown effect (timers for first & second submit groups)
+// ------------------------------
+useEffect(() => {
+  // Helper to setup a countdown for a given kickoff
+  const setupCountdown = (kickoff, setStr) => {
+    if (!kickoff) {
+      setStr("Kickoff time TBD");
+      return () => {};
+    }
+
+    const update = () => {
+      const diff = kickoff - new Date();
+      if (diff <= 0) {
+        setStr("Kickoff reached!");
+      } else {
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setStr(`Time until kickoff: ${hours}h ${minutes}m ${seconds}s`);
       }
-      const update = () => {
-        const diff = kickoff - new Date();
-        if (diff <= 0) {
-          setStr("Kickoff reached!");
-        } else {
-          const hours = Math.floor(diff / (1000 * 60 * 60));
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-          setStr(`Time until kickoff: ${hours}h ${minutes}m ${seconds}s`);
-        }
-      };
-      update();
-      const t = setInterval(update, 1000);
-      return () => clearInterval(t);
     };
-    const c1 = setup(firstKickoff, setTimeFirst);
-    const c2 = setup(secondKickoff, setTimeSecond);
-    return () => {
-      c1 && c1();
-      c2 && c2();
-    };
-  }, [firstKickoff, secondKickoff]);
 
-  // Disable logic per section
-  const now = new Date();
-  
-  const firstLocked = submittedFirst || (false ? false : (firstKickoff ? now >= firstKickoff : true));
-  
-  const secondLocked = submittedSecond || (false ? false : (secondKickoff ? now >= secondKickoff : true));
+    // Initial update immediately
+    update();
+
+    // Update every second
+    const timerId = setInterval(update, 1000);
+
+    // Cleanup interval on unmount or dependency change
+    return () => clearInterval(timerId);
+  };
+
+  // Setup countdown timers for first and second submit groups
+  const cleanupFirst = setupCountdown(firstKickoff, setTimeFirst);
+  const cleanupSecond = setupCountdown(secondKickoff, setTimeSecond);
+
+  // Cleanup intervals on unmount
+  return () => {
+    cleanupFirst();
+    cleanupSecond();
+  };
+}, [firstKickoff, secondKickoff]);
+
+// ------------------------------
+// Disable logic per section
+// ------------------------------
+// Only lock when the countdown has reached "Kickoff reached!" or the user has submitted
+const firstLocked = submittedFirst || timeFirst === "Kickoff reached!";
+const secondLocked = submittedSecond || timeSecond === "Kickoff reached!";
+
+
+
+// Optional debug
+console.log("First group kickoff:", firstKickoff);
+console.log("Second group kickoff:", secondKickoff);
+console.log("First locked?", firstLocked);
+console.log("Second locked?", secondLocked);
+
 
 
   // Handlers
