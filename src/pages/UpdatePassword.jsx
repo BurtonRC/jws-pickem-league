@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { Link } from "react-router-dom"; // <--- Import Link
 
 export default function UpdatePassword() {
   const [password, setPassword] = useState("");
@@ -9,30 +10,18 @@ export default function UpdatePassword() {
   const logoPath = `${import.meta.env.BASE_URL}images/pickem-logo.png`;
 
   useEffect(() => {
-
-    console.log("Hash:", window.location.hash);
-  console.log("Search:", window.location.search);
-  console.log("Token from hash:", token);
-
-
-  // Try query string first
-  let token = new URLSearchParams(window.location.search).get("access_token");
-
-  // If not found, try hash fragment
-  if (!token) {
+    // Extract access_token from hash
     const hash = window.location.hash.substring(1); // remove #
     const params = new URLSearchParams(hash);
-    token = params.get("access_token");
-  }
+    const token = params.get("access_token");
 
-  if (!token) {
-    setMessage("Invalid or expired link.");
-  } else {
-    setAccessToken(token);
-    supabase.auth.setSession({ access_token: token });
-  }
-}, []);
-
+    if (!token) {
+      setMessage("Invalid or expired link.");
+    } else {
+      setAccessToken(token);
+      supabase.auth.setSession({ access_token: token });
+    }
+  }, []);
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -51,17 +40,7 @@ export default function UpdatePassword() {
         onSubmit={handleUpdate}
         className="bg-white p-8 rounded shadow-md w-full max-w-sm space-y-4"
       >
-        {message && (
-          <p
-            className={
-              message.includes("successfully")
-                ? "text-green-600"
-                : "text-red-500"
-            }
-          >
-            {message}
-          </p>
-        )}
+        {message && <p className="text-red-500">{message}</p>}
 
         <input
           type="password"
@@ -71,12 +50,20 @@ export default function UpdatePassword() {
           required
           className="w-full p-2 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+
         <button
           type="submit"
           className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
         >
           Update Password
         </button>
+
+        {/* Back to Login link */}
+        <div className="mt-4 text-center">
+          <Link to="/login" className="text-blue-500 hover:underline">
+            Back to Login
+          </Link>
+        </div>
       </form>
     </div>
   );

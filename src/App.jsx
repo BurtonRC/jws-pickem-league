@@ -133,23 +133,11 @@ export default function App() {
       <Route path="/update-password" element={<UpdatePassword />} />
 
 
-      {/* Catch-all redirect, but exclude update-password */}
-  <Route
-    path="*"
-    element={
-      user ? (
-        <Navigate to="/home" replace />
-      ) : (
-        // If it's not update-password, go to login
-        window.location.pathname === "/update-password" ? (
-          <UpdatePassword />
-        ) : (
-          <Navigate to="/login" replace />
-        )
-      )
-    }
-  />
-
+      {/* Catch-all redirect */}
+      <Route
+        path="*"
+        element={user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />}
+      />
     </Routes>
   );
 }
