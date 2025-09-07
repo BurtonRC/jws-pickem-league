@@ -75,7 +75,7 @@ export default function WeeklyPicksPage() {
 
 
 
-// Fetch ESPN schedule dynamically or load Supabase test week
+// Fetch ESPN schedule dynamically
 useEffect(() => {
   const fetchWeekGames = async () => {
     console.log("Fetching schedule...");
@@ -84,99 +84,68 @@ useEffect(() => {
       let weekGames = [];
       let weekObj = { weekNumber: 1 }; // default
 
-      // ------------------- CONFIG: TEST MODE -------------------
-      const useSupabaseGames = false; // <-- set false to go back to live ESPN
-      const testWeekNumber = 3;      // test week for Supabase
-      // ---------------------------------------------------------
+      // ---- Fetch live ESPN games ----
+      console.log("Fetching ESPN schedule...");
+      const res = await fetch(
+        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard`
+      );
+      const data = await res.json();
 
-      if (useSupabaseGames) {
-        // ---- Load test week games from Supabase ----
-        const { data, error } = await supabase
-          .from("weekly_games")
-          .select("*")
-          .eq("week_number", testWeekNumber)
-          .order("kickoff_utc");
+      console.log("ESPN raw events:", data.events, "Week:", data.season?.week);
 
-        if (error) throw error;
+      weekObj = { weekNumber: data.season?.week || 1 };
 
-        weekGames = data.map((g) => ({
-          id: g.id,
-          teams: g.teams,      // should be stored as array in weekly_games
-          day: g.day,
-          kickoffUTC: g.kickoff_utc,
-          dbTeam: g.db_team || "",
-          dbLabel: g.db_label || "",
-          pointSpread: g.point_spread || [],
-        }));
+      // Map ESPN games into your expected structure
+      weekGames = data.events.map((game) => {
+        const matchup = game.name.split(" at ");
+        const kickoffUTC = new Date(game.date);
 
-        weekObj = { weekNumber: testWeekNumber };
-        console.log("Loaded test week games from Supabase:", weekGames);
+        // Determine local day for each user based on their browser timezone
+        const day = kickoffUTC.toLocaleString("en-US", { weekday: "short" });
 
-      } else {
-// ---- Fetch live ESPN games ----
-console.log("Fetching ESPN schedule...");
-const res = await fetch(
-  `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard`
-);
-const data = await res.json();
+        return {
+          id: game.id,
+          teams: matchup,
+          dbTeam: "",       // will be injected next
+          dbLabel: "",      // will be injected next
+          pointSpread: [],  // will be injected next
+          day,              // keep for first/second submit
+          kickoffUTC: kickoffUTC.toISOString(), // keep UTC for countdown timers
+        };
+      });
 
-console.log("ESPN raw events:", data.events, "Week:", data.season?.week);
+      // ---- Overlay your manual DB teams and point spreads ----
+      weekGames = weekGames.map((game) => {
+        const gameIdStr = String(game.id);
+        const dbTeam = leagueConfig.driveByGames[gameIdStr] || "";
+        const dbLabel = dbTeam ? "DB" : "";
+        const ps = leagueConfig.pointSpreads[gameIdStr] || [];
 
-weekObj = { weekNumber: data.season?.week || 1 };
+        console.log(`Game ID: ${game.id}`, "Teams:", game.teams, "DB Team:", dbTeam, "Label:", dbLabel, "PS:", ps);
 
-// Map ESPN games into your expected structure
-weekGames = data.events.map((game) => {
-  const matchup = game.name.split(" at ");
-  const kickoffUTC = new Date(game.date);
+        return {
+          ...game,
+          dbTeam,
+          dbLabel,
+          pointSpread: ps
+        };
+      });
 
-  // Determine local day for each user based on their browser timezone
-  const day = kickoffUTC.toLocaleString("en-US", { weekday: "short" });
-
-  return {
-    id: game.id,
-    teams: matchup,
-    dbTeam: "",       // will be injected next
-    dbLabel: "",      // will be injected next
-    pointSpread: [],  // will be injected next
-    day,              // keep for first/second submit
-    kickoffUTC: kickoffUTC.toISOString(), // keep UTC for countdown timers
-  };
-});
-
-// ---- Overlay your manual DB teams and point spreads ----
-weekGames = weekGames.map((game) => {
-  const gameIdStr = String(game.id);
-  const dbTeam = leagueConfig.driveByGames[gameIdStr] || "";
-  const dbLabel = dbTeam ? "DB" : "";
-  const ps = leagueConfig.pointSpreads[gameIdStr] || [];
-
-  console.log(`Game ID: ${game.id}`, "Teams:", game.teams, "DB Team:", dbTeam, "Label:", dbLabel, "PS:", ps);
-
-  return {
-    ...game,
-    dbTeam,
-    dbLabel,
-    pointSpread: ps
-  };
-});
-
-
-
-
-
-
-
-      }
+      // ---- Sort games: Thu-Fri-Sat first, rest after ----
+      const sortedGames = [
+        ...weekGames.filter(g => ["Thu", "Fri", "Sat"].includes(g.day)),
+        ...weekGames.filter(g => !["Thu", "Fri", "Sat"].includes(g.day))
+      ];
 
       // ---- Set state ----
       setCurrentWeek(weekObj);
-      setGames(weekGames);
+      setGames(sortedGames);
 
       // Extract all teams
       setAllTeams(
         Array.from(
           new Set(
-            weekGames.flatMap((game) => game.teams)
+            sortedGames.flatMap((game) => game.teams)
           )
         )
       );
@@ -188,6 +157,7 @@ weekGames = weekGames.map((game) => {
 
   fetchWeekGames();
 }, []);
+
 
 
 useEffect(() => {
