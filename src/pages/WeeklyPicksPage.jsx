@@ -85,7 +85,6 @@ useEffect(() => {
       let weekObj = { weekNumber: 1 }; // default
 
       // ---- Fetch live ESPN games ----
-      console.log("Fetching ESPN schedule...");
       const res = await fetch(
         `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard`
       );
@@ -127,14 +126,18 @@ useEffect(() => {
           ...game,
           dbTeam,
           dbLabel,
-          pointSpread: ps
+          pointSpread: ps,
         };
       });
 
-      // ---- Sort games: Thu-Fri-Sat first, rest after ----
+      // ---- Sort games: Thu-Fri-Sat first, rest after, all by kickoffUTC ----
       const sortedGames = [
-        ...weekGames.filter(g => ["Thu", "Fri", "Sat"].includes(g.day)),
-        ...weekGames.filter(g => !["Thu", "Fri", "Sat"].includes(g.day))
+        ...weekGames
+          .filter(g => ["Thu", "Fri", "Sat"].includes(g.day))
+          .sort((a, b) => new Date(a.kickoffUTC) - new Date(b.kickoffUTC)),
+        ...weekGames
+          .filter(g => !["Thu", "Fri", "Sat"].includes(g.day))
+          .sort((a, b) => new Date(a.kickoffUTC) - new Date(b.kickoffUTC))
       ];
 
       // ---- Set state ----
@@ -157,6 +160,7 @@ useEffect(() => {
 
   fetchWeekGames();
 }, []);
+
 
 
 
@@ -760,7 +764,7 @@ const onSubmitSecond = async () => {
 {/* ===== MOBILE CARDS ===== */}
 <div className="md:hidden space-y-4">
   {(() => {
-    // Compute last Thu/Fri/Sat index
+    // Compute last Thu/Fri/Sat index in sorted games
     const lastFirstIndex = Math.max(
       ...games.map((g, idx) => (["Thu", "Fri", "Sat"].includes(g.day) ? idx : -1))
     );
@@ -773,8 +777,7 @@ const onSubmitSecond = async () => {
           {/* Game card */}
           <div className="bg-white p-3 rounded shadow">
             <div className="font-semibold">{game.teams[0]} at {game.teams[1]}</div>
-            <div>Day: {game.localKickoffStr}</div>
-
+            <div>Day: {game.day}</div>
 
             {/* Drive-By toggle */}
             {DBToggle(game, locked)}
@@ -834,7 +837,7 @@ const onSubmitSecond = async () => {
     });
   })()}
 
-  {/* Survivor card */}
+  {/* Survivor pick card */}
   {!survivorLost && (
     <div className="bg-white p-3 rounded shadow">
       <div className="font-semibold">Survivor Pick:</div>
@@ -859,7 +862,7 @@ const onSubmitSecond = async () => {
     </div>
   )}
 
-  {/* Submit #2 (timer + button) */}
+  {/* Submit #2 card (rest of week) */}
   {games.length > 1 && (
     <div className="bg-white p-3 rounded shadow flex flex-col gap-3">
       <span className="font-semibold">{timeSecond || "Kickoff time TBD"}</span>
@@ -874,6 +877,7 @@ const onSubmitSecond = async () => {
     </div>
   )}
 </div>
+
 
 
 
