@@ -52,3 +52,17 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Add this to your global CSS or a <style> tag if using inline CSS */
+@media (max-width: 870px) {
+  .nav-link-small {
+    font-size: 0.85rem; /* slightly smaller */
+    gap: 8px;           /* reduce spacing between links */
+  }
+
+  .logout-btn-small {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.5rem; /* slightly smaller padding */
+  }
+}
+

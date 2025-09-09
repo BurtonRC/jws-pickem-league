@@ -35,77 +35,76 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
           </Link>
 
           {/* Desktop nav links — hidden if minimal */}
-          {!minimal && (
-            <div className="hidden md:flex items-center gap-[12px] ml-6 flex-shrink overflow-hidden">
-              <NavLink
-                to="/home"
-                className={({ isActive }) =>
-                  `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-                }
-                style={{ paddingTop: "17px", paddingBottom: "17px" }}
-              >
-                Home
-              </NavLink>
+{!minimal && (
+  <div className="hidden md:flex items-center ml-6 flex-shrink overflow-hidden nav-link-small">
+    <NavLink
+      to="/home"
+      className={({ isActive }) =>
+        `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
+      }
+      style={{ paddingTop: "17px", paddingBottom: "17px" }}
+    >
+      Home
+    </NavLink>
 
-              {loggedIn && (
-                <>
-                  <NavLink
-                    to="/picks"
-                    className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-                    }
-                    style={{ paddingTop: "17px", paddingBottom: "17px" }}
-                  >
-                    Weekly Picks
-                  </NavLink>
-                  <NavLink
-                    to="/leaderboard"
-                    className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-                    }
-                    style={{ paddingTop: "17px", paddingBottom: "17px" }}
-                  >
-                    Leaderboard
-                  </NavLink>
-                  <NavLink
-                    to="/survivor"
-                    className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-                    }
-                    style={{ paddingTop: "17px", paddingBottom: "17px" }}
-                  >
-                    Survivor
-                  </NavLink>
-                  <NavLink
-                    to="/wednesday-reports"
-                    className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-                    }
-                    style={{ paddingTop: "17px", paddingBottom: "17px" }}
-                  >
-                    Wed Reports
-                  </NavLink>
-                  <NavLink
-                    to="/payments"
-                    className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-                    }
-                    style={{ paddingTop: "17px", paddingBottom: "17px" }}
-                  >
-                    Payments
-                  </NavLink>
-                  {/* NEW: Comments Page link */}
-                  <NavLink
-                    to="/comments"
-                    className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-                    }
-                    style={{ paddingTop: "17px", paddingBottom: "17px" }}
-                  >
-                    Comments
-                  </NavLink>
-                </>
-              )}
+    {loggedIn && (
+      <>
+        <NavLink
+          to="/picks"
+          className={({ isActive }) =>
+            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
+          }
+          style={{ paddingTop: "17px", paddingBottom: "17px" }}
+        >
+          Weekly Picks
+        </NavLink>
+        <NavLink
+          to="/leaderboard"
+          className={({ isActive }) =>
+            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
+          }
+          style={{ paddingTop: "17px", paddingBottom: "17px" }}
+        >
+          Leaderboard
+        </NavLink>
+        <NavLink
+          to="/survivor"
+          className={({ isActive }) =>
+            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
+          }
+          style={{ paddingTop: "17px", paddingBottom: "17px" }}
+        >
+          Survivor
+        </NavLink>
+        <NavLink
+          to="/wednesday-reports"
+          className={({ isActive }) =>
+            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
+          }
+          style={{ paddingTop: "17px", paddingBottom: "17px" }}
+        >
+          Wed Reports
+        </NavLink>
+        <NavLink
+          to="/payments"
+          className={({ isActive }) =>
+            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
+          }
+          style={{ paddingTop: "17px", paddingBottom: "17px" }}
+        >
+          Payments
+        </NavLink>
+        <NavLink
+          to="/comments"
+          className={({ isActive }) =>
+            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
+          }
+          style={{ paddingTop: "17px", paddingBottom: "17px" }}
+        >
+          Comments
+        </NavLink>
+      </>
+    )}
 
               {!loggedIn && (
                 <>
@@ -133,15 +132,16 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
           )}
         </div>
 
-        {/* Right side logout — hidden if minimal */}
-        {!minimal && loggedIn && (
-          <button
-            onClick={onLogout}
-            className="hidden md:block px-3 py-2 font-semibold text-red-400 hover:text-red-500 flex-shrink-0 ml-auto"
-          >
-            Log Out
-          </button>
-        )}
+       {/* Right side logout — hidden if minimal */}
+{!minimal && loggedIn && (
+  <button
+    onClick={onLogout}
+    className="hidden md:block ml-auto logout-btn-small px-3 py-2 font-semibold text-red-400 hover:text-red-500 flex-shrink-0"
+  >
+    Log Out
+  </button>
+)}
+
 
         {/* Mobile hamburger — hidden if minimal */}
         {!minimal && (
