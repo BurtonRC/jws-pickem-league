@@ -9,6 +9,13 @@ export default function HomePage({ user }) {
 
   const { comments } = useComments();
 
+  // Safe timestamp parser for dev & production
+const parseTimestamp = (ts) => {
+  // Ensure proper ISO format with Z (UTC) if missing
+  return new Date(ts.includes("T") ? ts : ts + "Z");
+};
+
+
   // Fetch latest report
   useEffect(() => {
     const fetchReport = async () => {
@@ -58,25 +65,26 @@ export default function HomePage({ user }) {
         <section className="p-6 bg-gray-100 rounded-xl space-y-4">
           <h3 className="text-xl font-semibold">Recent Comments</h3>
           {previewComments.map((c) => (
-            <div key={c.id} className="border-b border-gray-300 pb-2">
-              <p className="text-sm text-gray-600">
-                <span className="font-semibold">
-                  {c.user?.username ?? "Unknown"}:
-                </span>{" "}
-                {c.content}
-              </p>
-              <p className="text-xs text-gray-400">
-                {new Date(c.created_at).toLocaleTimeString([], {
-                  year: "numeric",
+  <div key={c.id} className="border-b border-gray-300 pb-2">
+    <p className="text-sm text-gray-600">
+      <span className="font-semibold">
+        {c.user?.username ?? "Unknown"}:
+      </span>{" "}
+      {c.content}
+    </p>
+    <p className="text-xs text-gray-400">
+      {parseTimestamp(c.created_at).toLocaleString([], {
+        year: "numeric",
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
         hour12: false, // 24-hour format
-                })}
-              </p>
-            </div>
-          ))}
+      })}
+    </p>
+  </div>
+))}
+
           <Link
             to="/comments"
             className="text-blue-600 hover:underline mt-2 block"

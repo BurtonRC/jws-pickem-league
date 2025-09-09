@@ -12,6 +12,13 @@ export default function CommentsPage({ user }) {
     setNewComment("");
   };
 
+  // Safe timestamp parser for dev & production
+const parseTimestamp = (ts) => {
+  // Ensure proper ISO format with Z (UTC) if missing
+  return new Date(ts.includes("T") ? ts : ts + "Z");
+};
+
+
   return (
     <main className="w-full max-w-[800px] mx-auto p-6 space-y-6">
       <h2 className="text-2xl font-bold">Comments</h2>
@@ -44,7 +51,7 @@ export default function CommentsPage({ user }) {
       {c.content}
     </p>
     <p className="text-xs text-gray-400">
-      {new Date(c.created_at).toLocaleString(undefined, {
+      {parseTimestamp(c.created_at).toLocaleString(undefined, {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -55,6 +62,7 @@ export default function CommentsPage({ user }) {
     </p>
   </div>
 ))}
+
 
           <div ref={commentsEndRef} />
         </div>
