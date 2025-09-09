@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { Link } from "react-router-dom";
+import { useComments } from "../context/CommentsContext";
 
-export default function HomePage() {
+export default function HomePage({ user }) {
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
 
-  // Fetch report
+  const { comments } = useComments();
+
+  // Fetch latest report
   useEffect(() => {
     const fetchReport = async () => {
       const { data, error } = await supabase
@@ -30,8 +33,11 @@ export default function HomePage() {
     fetchReport();
   }, []);
 
+  // Show last 3 comments
+  const previewComments = comments.slice(-3);
+
   return (
-    <main className="w-full md:w-[90%] max-w-5xl mx-auto p-6 space-y-8">
+    <main className="w-full max-w-[800px] mx-auto p-6 space-y-8">
       {report && (
         <section className="p-6 bg-white rounded-2xl shadow">
           <h2 className="text-2xl font-bold mb-2">{report.title}</h2>
@@ -46,6 +52,35 @@ export default function HomePage() {
         </section>
       )}
       {error && <p className="text-red-500">{error}</p>}
+
+      {/* Comments preview */}
+      {previewComments.length > 0 && (
+        <section className="p-6 bg-gray-100 rounded-xl space-y-4">
+          <h3 className="text-xl font-semibold">Recent Comments</h3>
+          {previewComments.map((c) => (
+            <div key={c.id} className="border-b border-gray-300 pb-2">
+              <p className="text-sm text-gray-600">
+                <span className="font-semibold">
+                  {c.user?.username ?? "Unknown"}:
+                </span>{" "}
+                {c.content}
+              </p>
+              <p className="text-xs text-gray-400">
+                {new Date(c.created_at).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            </div>
+          ))}
+          <Link
+            to="/comments"
+            className="text-blue-600 hover:underline mt-2 block"
+          >
+            View All Comments →
+          </Link>
+        </section>
+      )}
     </main>
   );
 }

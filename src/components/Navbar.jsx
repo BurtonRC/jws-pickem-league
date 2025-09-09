@@ -21,13 +21,11 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
   return (
     <nav className="w-full bg-gray-900 text-white shadow z-50">
       <div
-          className="w-full max-w-[1230px] mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8"
-          style={{ height: "50px" }}
-        >
-
+        className="w-full max-w-[1230px] mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8"
+        style={{ height: "50px" }}
+      >
         {/* Left: logo + nav links */}
         <div className="flex items-center flex-1 min-w-0">
-          {/* Logo flush left */}
           <Link to="/home" aria-label="Home" className="flex-shrink-0">
             <img
               src={logoPath}
@@ -42,9 +40,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
               <NavLink
                 to="/home"
                 className={({ isActive }) =>
-                  `${linkBase} ${hoverColorClass} ${
-                    isActive ? linkActive : ""
-                  }`
+                  `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
                 }
                 style={{ paddingTop: "17px", paddingBottom: "17px" }}
               >
@@ -56,9 +52,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   <NavLink
                     to="/picks"
                     className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${
-                        isActive ? linkActive : ""
-                      }`
+                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
                     }
                     style={{ paddingTop: "17px", paddingBottom: "17px" }}
                   >
@@ -67,9 +61,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   <NavLink
                     to="/leaderboard"
                     className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${
-                        isActive ? linkActive : ""
-                      }`
+                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
                     }
                     style={{ paddingTop: "17px", paddingBottom: "17px" }}
                   >
@@ -78,9 +70,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   <NavLink
                     to="/survivor"
                     className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${
-                        isActive ? linkActive : ""
-                      }`
+                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
                     }
                     style={{ paddingTop: "17px", paddingBottom: "17px" }}
                   >
@@ -89,9 +79,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   <NavLink
                     to="/wednesday-reports"
                     className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${
-                        isActive ? linkActive : ""
-                      }`
+                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
                     }
                     style={{ paddingTop: "17px", paddingBottom: "17px" }}
                   >
@@ -100,13 +88,21 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   <NavLink
                     to="/payments"
                     className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${
-                        isActive ? linkActive : ""
-                      }`
+                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
                     }
                     style={{ paddingTop: "17px", paddingBottom: "17px" }}
                   >
                     Payments
+                  </NavLink>
+                  {/* NEW: Comments Page link */}
+                  <NavLink
+                    to="/comments"
+                    className={({ isActive }) =>
+                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
+                    }
+                    style={{ paddingTop: "17px", paddingBottom: "17px" }}
+                  >
+                    Comments
                   </NavLink>
                 </>
               )}
@@ -116,9 +112,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   <NavLink
                     to="/login"
                     className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${
-                        isActive ? linkActive : ""
-                      }`
+                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
                     }
                     style={{ paddingTop: "17px", paddingBottom: "17px" }}
                   >
@@ -127,9 +121,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   <NavLink
                     to="/signup"
                     className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${
-                        isActive ? linkActive : ""
-                      }`
+                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
                     }
                     style={{ paddingTop: "17px", paddingBottom: "17px" }}
                   >
@@ -192,9 +184,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
               to="/home"
               onClick={() => setMenuOpen(false)}
               className={({ isActive }) =>
-                `block py-2 ${hoverColorClass} ${
-                  isActive ? "text-[#f1f2f3]" : ""
-                }`
+                `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
               }
             >
               Home
@@ -206,9 +196,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   to="/picks"
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${
-                      isActive ? "text-[#f1f2f3]" : ""
-                    }`
+                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
                   }
                 >
                   Weekly Picks
@@ -217,9 +205,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   to="/leaderboard"
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${
-                      isActive ? "text-[#f1f2f3]" : ""
-                    }`
+                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
                   }
                 >
                   Leaderboard
@@ -228,9 +214,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   to="/survivor"
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${
-                      isActive ? "text-[#f1f2f3]" : ""
-                    }`
+                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
                   }
                 >
                   Survivor
@@ -239,9 +223,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   to="/wednesday-reports"
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${
-                      isActive ? "text-[#f1f2f3]" : ""
-                    }`
+                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
                   }
                 >
                   Wed Reports
@@ -250,12 +232,20 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   to="/payments"
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${
-                      isActive ? "text-[#f1f2f3]" : ""
-                    }`
+                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
                   }
                 >
                   Payments
+                </NavLink>
+                {/* NEW: Mobile Comments Page link */}
+                <NavLink
+                  to="/comments"
+                  onClick={() => setMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
+                  }
+                >
+                  Comments
                 </NavLink>
                 <button
                   onClick={() => {
@@ -273,9 +263,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   to="/login"
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${
-                      isActive ? "text-[#f1f2f3]" : ""
-                    }`
+                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
                   }
                 >
                   Login
@@ -284,9 +272,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
                   to="/signup"
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${
-                      isActive ? "text-[#f1f2f3]" : ""
-                    }`
+                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
                   }
                 >
                   Sign Up
