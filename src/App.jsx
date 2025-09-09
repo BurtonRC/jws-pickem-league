@@ -60,17 +60,18 @@ export default function App() {
 
         {/* Pages with MainLayout (Scoreboard + Navbar + Page Content) */}
         <Route
-          path="/home"
-          element={
-            user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout}>
-                <HomePage user={user} />
-              </MainLayout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
+  path="/home"
+  element={
+    user ? (
+      <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+        <HomePage user={user} />  {/* Pass user here */}
+      </MainLayout>
+    ) : (
+      <Navigate to="/login" replace />
+    )
+  }
+/>
+
         <Route
           path="/picks"
           element={
@@ -134,17 +135,17 @@ export default function App() {
 
         {/* Comments Page */}
         <Route
-          path="/comments"
-          element={
-            user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout}>
-                <CommentsPage user={user} />
-              </MainLayout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
+  path="/comments"
+  element={
+    user ? (
+      <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+        <CommentsPage user={user} />  {/* Pass user here */}
+      </MainLayout>
+    ) : (
+      <Navigate to="/login" replace />
+    )
+  }
+/>
 
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/update-password" element={<UpdatePassword />} />

@@ -38,19 +38,24 @@ export default function CommentsPage({ user }) {
       ) : (
         <div className="space-y-4">
           {comments.map((c) => (
-            <div key={c.id} className="p-4 bg-gray-100 rounded-xl">
-              <p className="text-sm text-gray-600">
-                <span className="font-semibold">{c.user?.username ?? "Unknown"}:</span>{" "}
-                {c.content}
-              </p>
-              <p className="text-xs text-gray-400">
-                {new Date(c.created_at).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-            </div>
-          ))}
+  <div key={c.id} className="p-4 bg-gray-100 rounded-xl">
+    <p className="text-sm text-gray-600">
+      <span className="font-semibold">{c.user?.username ?? "Unknown"}:</span>{" "}
+      {c.content}
+    </p>
+    <p className="text-xs text-gray-400">
+      {new Date(c.created_at).toLocaleString(undefined, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false, // 24-hour format
+      })}
+    </p>
+  </div>
+))}
+
           <div ref={commentsEndRef} />
         </div>
       )}
