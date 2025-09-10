@@ -26,33 +26,50 @@ export default function Scoreboard({ collapsed }) {
   };
 
   // --- Fetch scores for selected week ---
-  useEffect(() => {
-    const fetchScores = async () => {
-      try {
-        let baseUrl =
-          "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
-        let url = baseUrl;
+useEffect(() => {
+  const fetchScores = async () => {
+    try {
+      let baseUrl = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+      let url = baseUrl;
 
-        if (week !== "current") {
-          const { seasontype, week: wk } = weekMap[week];
-          url = `${baseUrl}?seasontype=${seasontype}&week=${wk}`;
-        }
-
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error("Score API error");
-        const json = await resp.json();
-
-        if (!currentWeek && json.week?.number) setCurrentWeek(json.week.number);
-        setScores(json.events || []);
-      } catch {
-        setError("Unable to load scores. Try again later.");
+      // If user manually selected a week, use it
+      if (week !== "current") {
+        const { seasontype, week: wk } = weekMap[week];
+        url = `${baseUrl}?seasontype=${seasontype}&week=${wk}`;
       }
-    };
 
-    fetchScores();
-    const interval = setInterval(fetchScores, 60000);
-    return () => clearInterval(interval);
-  }, [week, currentWeek]);
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error("Score API error");
+      const json = await resp.json();
+
+      setScores(json.events || []);
+
+      // Automatically track the current week from ESPN API
+      const espnCurrentWeek = json.season?.week || 1;
+      setCurrentWeek(espnCurrentWeek);
+
+      // If the user is viewing "current", auto-advance week if all games finished
+      if (week === "current") {
+        const allGamesFinished = (json.events || []).every(
+          (g) => g.status?.type?.completed === true
+        );
+
+        if (allGamesFinished && espnCurrentWeek < 18) {
+          // Move to the next week automatically
+          const nextWeekKey = `reg${espnCurrentWeek + 1}`;
+          setWeek(nextWeekKey);
+        }
+      }
+    } catch {
+      setError("Unable to load scores. Try again later.");
+    }
+  };
+
+  fetchScores();
+  const interval = setInterval(fetchScores, 60000); // refresh every minute
+  return () => clearInterval(interval);
+}, [week]);
+
 
   if (error) return null;
 
