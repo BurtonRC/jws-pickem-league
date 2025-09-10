@@ -46,7 +46,15 @@ body {
   font-family: 'Lato', sans-serif;
 }
 
-
+/* App.css or your CSS file */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+  font-size: 18px;
+  font-weight: normal;
+}
 
 /* Hide scrollbar (but keep scroll functionality) */
 .scrollbar-hide::-webkit-scrollbar {

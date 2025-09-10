@@ -570,7 +570,11 @@ const onSubmitSecond = async () => {
 };
 
 
-  if (!games || !games.length) return <div>Loading games...</div>;
+
+if (!games || !games.length) {
+  return <div className="loading-container">Loading games...</div>;
+}
+
 
   // Helper: shared cell content for DB toggle
   const DBToggle = (game, disabled) =>
