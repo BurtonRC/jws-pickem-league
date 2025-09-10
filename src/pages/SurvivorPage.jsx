@@ -15,50 +15,39 @@ export default function SurvivorPage() {
   }, []);
 
   // ✅ Fetch survivor picks from Supabase
-useEffect(() => {
-  const fetchSurvivorData = async () => {
-    // ✅ fetch survivor picks without joining profiles
-    const { data: picks, error } = await supabase
-      .from("survivor_picks")
-      .select("user_id, week, team, result")
-      .order("week");
+  useEffect(() => {
+    const fetchSurvivorData = async () => {
+      // ✅ fetch survivor picks without joining profiles
+      const { data: picks, error } = await supabase
+        .from("survivor_picks")
+        .select("user_id, week, team, result, username")
+        .order("week");
 
-    if (error) {
-      console.error("Error fetching survivor picks:", error);
-      return;
-    }
+      if (error) {
+        console.error("Error fetching survivor picks:", error);
+        return;
+      }
 
-    // ✅ fetch profiles separately
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, username");
+      // Group picks by username
+      const grouped = {};
+      let maxWeekFound = 1;
 
-    if (profilesError) {
-      console.error("Error fetching profiles:", profilesError);
-      return;
-    }
+      picks.forEach((pick) => {
+        const user = pick.username || "Unknown";
+        if (!grouped[user]) grouped[user] = {};
+        grouped[user][pick.week] = {
+          team: pick.team,
+          result: pick.result
+        };
+        if (pick.week > maxWeekFound) maxWeekFound = pick.week;
+      });
 
-    // ✅ merge username into survivor picks
-    const grouped = {};
-    let maxWeekFound = 1;
+      setSurvivorData(grouped);
+      setMaxWeek(maxWeekFound);
+    };
 
-    picks.forEach((pick) => {
-      const user = profiles.find((p) => p.id === pick.user_id)?.username || "Unknown";
-      if (!grouped[user]) grouped[user] = {};
-      grouped[user][pick.week] = {
-        team: pick.team,
-        result: pick.result
-      };
-      if (pick.week > maxWeekFound) maxWeekFound = pick.week;
-    });
-
-    setSurvivorData(grouped);
-    setMaxWeek(maxWeekFound);
-  };
-
-  fetchSurvivorData();
-}, []);
-
+    fetchSurvivorData();
+  }, []);
 
   if (!survivorData || Object.keys(survivorData).length === 0) {
     return (
@@ -87,39 +76,45 @@ useEffect(() => {
             </tr>
           </thead>
           <tbody>
-            {Object.entries(survivorData).map(([user, picks]) => (
-              <tr key={user} className="border-b border-gray-300">
-                <td className="p-2 font-semibold text-center">{user}</td>
-                {Array.from({ length: maxWeek }, (_, i) => {
-                  const weekNum = i + 1;
-                  const pick = picks[weekNum];
+            {Object.keys(survivorData)
+              .sort() // ✅ Sort users alphabetically
+              .map((user) => {
+                const picks = survivorData[user];
+                let eliminated = false; // ✅ Track if user is out
 
-                  // ✅ Only show picks that are resolved ('win' or 'loss')
-                  if (!pick || pick.result === "pending")
-                    return <td key={weekNum} className="p-2 text-center" />;
+                return (
+                  <tr key={user} className="border-b border-gray-300">
+                    <td className="p-2 font-semibold text-center">{user}</td>
+                    {Array.from({ length: maxWeek }, (_, i) => {
+                      const weekNum = i + 1;
+                      const pick = picks[weekNum];
 
-                  const { team, result } = pick;
-                  const logo = team ? teamLogos[team] : null;
+                      if (!pick || pick.result === "pending") return <td key={weekNum} className="p-2 text-center" />;
 
-                  // Dim only the losing pick
-                  const isDimmed = result === "loss";
+                      const { team, result } = pick;
+                      const logo = team ? teamLogos[team] : null;
 
-                  return (
-                    <td key={weekNum} className="p-2 text-center">
-                      {logo ? (
-                        <img
-                          src={`${import.meta.env.BASE_URL}${logo}`}
-                          alt={team}
-                          className={`w-12 h-12 mx-auto ${isDimmed ? "opacity-20" : ""}`}
-                        />
-                      ) : (
-                        team || ""
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+                      // ✅ Dim losing pick, mark user as eliminated
+                      const isDimmed = eliminated || result === "loss";
+                      if (result === "loss") eliminated = true;
+
+                      return (
+                        <td key={weekNum} className="p-2 text-center">
+                          {logo ? (
+                            <img
+                              src={`${import.meta.env.BASE_URL}${logo}`}
+                              alt={team}
+                              className={`w-12 h-12 mx-auto ${isDimmed ? "opacity-20" : ""}`}
+                            />
+                          ) : (
+                            team || ""
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </div>

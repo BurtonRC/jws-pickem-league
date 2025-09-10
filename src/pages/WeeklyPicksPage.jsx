@@ -588,10 +588,10 @@ const onSubmitSecond = async () => {
         "Dallas Cowboys": "Dallas",
         "Kansas City Chiefs": "Kansas City",
         "Tampa Bay Buccaneers": "Tampa Bay",
-        "Los Angeles Rams": "Los Angeles",
-        "Los Angeles Chargers": "Los Angeles",
-        "New York Giants": "New York",
-        "New York Jets": "New York",
+        "Los Angeles Rams": "LA Rams",
+        "Los Angeles Chargers": "LA Chargers",
+        "New York Giants": "NY Giants",
+        "New York Jets": "NY Jets",
         "New Orleans Saints": "New Orleans",
         // add all other teams as needed
       };

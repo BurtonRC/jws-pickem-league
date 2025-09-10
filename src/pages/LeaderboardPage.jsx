@@ -6,33 +6,35 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
-      // Fetch leaderboard directly from the view
+      // ✅ Fetch leaderboard directly from weekly_results
       const { data: rows, error } = await supabase
-        .from("leaderboard_view")
-        .select("*");
+        .from("weekly_results")
+        .select(
+          "user_id, username, week, prev_week_score, this_week_score, overall_score, total_drive_bys, total_point_spreads"
+        );
 
       if (error) {
         console.error("Error fetching leaderboard:", error);
         return;
       }
 
-      // Group by username to show one row per user (latest week)
+      // ✅ Group by username (latest week only)
       const grouped = {};
       rows.forEach((row) => {
         if (!grouped[row.username] || row.week > grouped[row.username].week) {
           grouped[row.username] = {
             username: row.username,
-            prevWeek: row.prev_week_score || 0,
-            thisWeek: row.this_week_score || 0,
-            total: row.overall_score || 0,
-            db: row.total_drive_bys || 0,
-            ps: row.total_point_spreads || 0,
+            prevWeek: row.prev_week_score ?? 0,
+            thisWeek: row.this_week_score ?? 0,
+            total: row.overall_score ?? 0,        // ✅ overall_score as Total
+            db: row.total_drive_bys ?? 0,
+            ps: row.total_point_spreads ?? 0,     // ✅ total_point_spreads as PS
             week: row.week,
           };
         }
       });
 
-      // Sort descending by total points
+      // ✅ Sort descending by total points (highest → lowest)
       const sortedUsers = Object.values(grouped).sort((a, b) => b.total - a.total);
 
       setUsers(sortedUsers);
@@ -73,7 +75,6 @@ export default function LeaderboardPage() {
           </thead>
           <tbody>
             {users.map((user, index) => {
-              // Optional: highlight top 3
               let bgColor = index % 2 === 0 ? "bg-white" : "bg-gray-50";
               if (index === 0) bgColor = "bg-[#e5ca3b96] text-black"; // gold
               if (index === 1) bgColor = "bg-[#ebeaea] text-black";   // silver
