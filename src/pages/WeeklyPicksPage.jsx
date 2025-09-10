@@ -665,7 +665,7 @@ if (!games || !games.length) {
                   onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
                   disabled={locked}
                 >
-                  <option value="">-- Select Point Spread --</option>
+                  <option value="">-- Disruptor Point Spread --</option>
                   {game.pointSpread.map((ps, psIdx) => (
                     <React.Fragment key={psIdx}>
                       <option value={`${game.teams[0]} ${ps >= 0 ? "+" : ""}${ps}`}>
