@@ -26,13 +26,14 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
       >
         {/* Left: logo + nav links */}
         <div className="flex items-center flex-1 min-w-0">
-          <Link to="/home" aria-label="Home" className="flex-shrink-0">
-            <img
-              src={logoPath}
-              alt="JWs PickEm League Logo"
-              className="h-10 w-auto"
-            />
-          </Link>
+  <Link to="/home" aria-label="Home" className="flex-shrink-0">
+  <img
+    src={logoPath}
+    alt="JWs PickEm League Logo"
+    className="h-10 sm:h-12 md:h-[4.4rem] w-auto"
+    style={{ paddingLeft: 0 }}
+  />
+</Link>
 
           {/* Desktop nav links — hidden if minimal */}
 {!minimal && (
