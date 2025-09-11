@@ -16,20 +16,20 @@ export function CommentsProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const commentsEndRef = useRef(null);
 
-  // Fetch all comments with username
+  // Scroll to bottom helper
+  const scrollToBottom = () => {
+    if (commentsEndRef.current) {
+      commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  // Fetch all comments from the view
   const fetchComments = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("comments")
-        .select(`
-          id,
-          content,
-          created_at,
-          user:user_id (
-            username
-          )
-        `)
+        .from("comments_with_username")
+        .select("*")
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -45,20 +45,24 @@ export function CommentsProvider({ children }) {
   // Add a new comment
   const addComment = async (userId, content) => {
     try {
-      const { data, error } = await supabase
+      // Insert into original comments table
+      const { data: insertedComment, error: insertError } = await supabase
         .from("comments")
         .insert([{ user_id: userId, content }])
-        .select(`
-          id,
-          content,
-          created_at,
-          user:user_id (
-            username
-          )
-        `)
+        .select("*")
         .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
+
+      // Fetch the inserted comment from the view to get the username
+      const { data, error: fetchError } = await supabase
+        .from("comments_with_username")
+        .select("*")
+        .eq("id", insertedComment.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       setComments((prev) => [...prev, data]);
       scrollToBottom();
     } catch (err) {
@@ -66,39 +70,27 @@ export function CommentsProvider({ children }) {
     }
   };
 
-  // Scroll to bottom
-  const scrollToBottom = () => {
-    if (commentsEndRef.current) {
-      commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   useEffect(() => {
     fetchComments();
 
-    // Real-time subscription for inserts
+    // Realtime subscription for new inserts
     const subscription = supabase
       .channel("comments")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "comments" },
         async (payload) => {
-          // Fetch full comment with username
-          const { data, error } = await supabase
-            .from("comments")
-            .select(`
-              id,
-              content,
-              created_at,
-              user:user_id (
-                username
-              )
-            `)
-            .eq("id", payload.new.id)
-            .single();
-          if (!error && data) {
+          try {
+            const { data, error } = await supabase
+              .from("comments_with_username")
+              .select("*")
+              .eq("id", payload.new.id)
+              .single();
+            if (error) throw error;
             setComments((prev) => [...prev, data]);
             scrollToBottom();
+          } catch (err) {
+            console.error("Error fetching new comment:", err);
           }
         }
       )

@@ -9,11 +9,8 @@ export default function HomePage({ user }) {
 
   const { comments } = useComments();
 
-  // Safe timestamp parser for dev & production
-  const parseTimestamp = (ts) => {
-    // Ensure proper ISO format with Z (UTC) if missing
-    return new Date(ts.includes("T") ? ts : ts + "Z");
-  };
+  // Safe timestamp parser
+  const parseTimestamp = (ts) => new Date(ts.includes("T") ? ts : ts + "Z");
 
   // Fetch latest report
   useEffect(() => {
@@ -39,7 +36,6 @@ export default function HomePage({ user }) {
     fetchReport();
   }, []);
 
-  // Show last 3 comments
   const previewComments = comments.slice(-3);
 
   return (
@@ -66,9 +62,7 @@ export default function HomePage({ user }) {
           {previewComments.map((c) => (
             <div key={c.id} className="border-b border-gray-300 pb-2">
               <p className="text-sm text-gray-600">
-                <span className="font-semibold">
-                  {c.user?.username ?? "Unknown"}:
-                </span>{" "}
+                <span className="font-semibold">{c.username ?? "Unknown"}:</span>{" "}
                 {c.content}
               </p>
               <p className="text-xs text-gray-400">
@@ -78,12 +72,11 @@ export default function HomePage({ user }) {
                   day: "2-digit",
                   hour: "2-digit",
                   minute: "2-digit",
-                  hour12: false, // 24-hour format
+                  hour12: false,
                 })}
               </p>
             </div>
           ))}
-
           <Link
             to="/comments"
             className="text-blue-600 hover:underline mt-2 block"

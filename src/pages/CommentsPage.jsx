@@ -12,12 +12,7 @@ export default function CommentsPage({ user }) {
     setNewComment("");
   };
 
-  // Safe timestamp parser for dev & production
-const parseTimestamp = (ts) => {
-  // Ensure proper ISO format with Z (UTC) if missing
-  return new Date(ts.includes("T") ? ts : ts + "Z");
-};
-
+  const parseTimestamp = (ts) => new Date(ts.includes("T") ? ts : ts + "Z");
 
   return (
     <main className="w-full max-w-[800px] mx-auto p-6 space-y-6">
@@ -45,25 +40,23 @@ const parseTimestamp = (ts) => {
       ) : (
         <div className="space-y-4">
           {comments.map((c) => (
-  <div key={c.id} className="p-4 bg-gray-100 rounded-xl">
-    <p className="text-sm text-gray-600">
-      <span className="font-semibold">{c.user?.username ?? "Unknown"}:</span>{" "}
-      {c.content}
-    </p>
-    <p className="text-xs text-gray-400">
-      {parseTimestamp(c.created_at).toLocaleString(undefined, {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false, // 24-hour format
-      })}
-    </p>
-  </div>
-))}
-
-
+            <div key={c.id} className="p-4 bg-gray-100 rounded-xl">
+              <p className="text-sm text-gray-600">
+                <span className="font-semibold">{c.username ?? "Unknown"}:</span>{" "}
+                {c.content}
+              </p>
+              <p className="text-xs text-gray-400">
+                {parseTimestamp(c.created_at).toLocaleString([], {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                })}
+              </p>
+            </div>
+          ))}
           <div ref={commentsEndRef} />
         </div>
       )}
