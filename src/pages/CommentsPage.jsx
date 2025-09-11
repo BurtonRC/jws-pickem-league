@@ -1,9 +1,31 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useComments } from "../context/CommentsContext";
 
 export default function CommentsPage({ user }) {
   const { comments, addComment, loading, commentsEndRef } = useComments();
   const [newComment, setNewComment] = useState("");
+  const textareaRef = useRef(null);
+
+  // Auto-resize textarea smoothly, including scrolling and cursor padding
+  useEffect(() => {
+    if (!textareaRef.current) return;
+
+    const textarea = textareaRef.current;
+
+    const resize = () => {
+      textarea.style.height = "auto"; // reset to allow shrinking
+      const newHeight = Math.min(textarea.scrollHeight, 200); // respect maxHeight
+      textarea.style.height = newHeight + "px";
+
+      // Scroll to bottom if content exceeds maxHeight
+      if (textarea.scrollHeight > 200) {
+        textarea.scrollTop = textarea.scrollHeight - textarea.clientHeight + 4; // 4px padding
+      }
+    };
+
+    const frame = requestAnimationFrame(resize);
+    return () => cancelAnimationFrame(frame);
+  }, [newComment]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,17 +41,19 @@ export default function CommentsPage({ user }) {
       <h2 className="text-2xl font-bold">Comments</h2>
 
       {/* Comment input */}
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <input
-          type="text"
-          className="flex-1 p-2 border rounded"
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+        <textarea
+          ref={textareaRef}
+          className="w-full p-2 border rounded resize-none overflow-y-auto transition-[height] duration-200 ease-out"
           placeholder="Write a comment..."
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
+          rows={2} // initial height
+          style={{ maxHeight: "200px" }} // maximum height
         />
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 rounded hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 self-end"
         >
           Post
         </button>
