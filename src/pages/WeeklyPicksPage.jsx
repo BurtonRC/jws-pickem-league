@@ -251,7 +251,7 @@ useEffect(() => {
 // Disable logic per section
 // ------------------------------
 // Only lock when the countdown has reached "Kickoff reached!" or the user has submitted
-const firstLocked = submittedFirst || timeFirst === "Kickoff reached!";
+const firstLocked = submittedFirst; // || timeFirst === "Kickoff reached!";
 const secondLocked = submittedSecond || timeSecond === "Kickoff reached!";
 
 
@@ -496,27 +496,34 @@ const onSubmitFirst = async () => {
   }
 
   try {
-    await saveToSupabase(); // Use central save function
+    // Save picks first
+    await saveToSupabase();
 
-// 2️⃣ Get logged-in user
+    // Get logged-in user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.email) throw new Error("User email not found");
 
-    // 3️⃣ Call your backend API to send the email
-    await fetch("/api/sendWeeklyPicks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        picks: selectedTeams,
-        pointSpreads: pointSpreadSelection,
-        dbs: DBs,
-        week: currentWeek.weekNumber,
-        userEmail: user.email  // ✅ automatically uses the current user's email
-      })
-    });
+    // Send confirmation email via Edge Function
+    try {
+      await fetch("https://pliswiceskoebzcxbgwt.functions.supabase.co/sendPickConfirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          picks: Object.values(selectedTeams),
+          pointSpreads: pointSpreadSelection,
+          dbs: DBs,
+          survivorPick,
+          week: currentWeek.weekNumber,
+        }),
+      });
 
+      console.log("✅ Confirmation email sent (First game picks)");
+    } catch (err) {
+      console.warn("⚠️ Failed to send confirmation email (First game picks):", err);
+    }
 
-
+    // Update UI
     setSubmittedFirst(true);
     setConfirmMsg("First game pick submitted successfully.");
     setConfirmOpen(true);
@@ -526,6 +533,8 @@ const onSubmitFirst = async () => {
     setWarnOpen(true);
   }
 };
+
+
 
 // ---- Submit Rest of Week Picks ----
 const onSubmitSecond = async () => {
@@ -539,26 +548,34 @@ const onSubmitSecond = async () => {
   }
 
   try {
-    await saveToSupabase(); // Use central save function
+    // Save picks first
+    await saveToSupabase();
 
-// 2️⃣ Get logged-in user
+    // Get logged-in user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.email) throw new Error("User email not found");
 
-    // 3️⃣ Call your backend API to send the email
-    await fetch("/api/sendWeeklyPicks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        picks: selectedTeams,
-        pointSpreads: pointSpreadSelection,
-        dbs: DBs,
-        week: currentWeek.weekNumber,
-        userEmail: user.email  // ✅ automatically uses the current user's email
-      })
-    });
+    // Send confirmation email via Edge Function
+    try {
+      await fetch("https://pliswiceskoebzcxbgwt.functions.supabase.co/sendPickConfirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          picks: Object.values(selectedTeams),
+          pointSpreads: pointSpreadSelection,
+          dbs: DBs,
+          survivorPick,
+          week: currentWeek.weekNumber,
+        }),
+      });
 
+      console.log("✅ Confirmation email sent (Rest of week picks)");
+    } catch (err) {
+      console.warn("⚠️ Failed to send confirmation email (Rest of week picks):", err);
+    }
 
+    // Update UI
     setSubmittedSecond(true);
     setConfirmMsg("Rest of week picks submitted successfully.");
     setConfirmOpen(true);
@@ -568,6 +585,8 @@ const onSubmitSecond = async () => {
     setWarnOpen(true);
   }
 };
+
+
 
 
 
@@ -802,7 +821,7 @@ if (!games || !games.length) {
                 onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
                 disabled={locked}
               >
-                <option value="">-- Select Point Spread --</option>
+                <option value="">-- Disruptor Point Spread --</option>
                 {game.pointSpread.map((ps, psIdx) => (
                   <React.Fragment key={psIdx}>
                     <option value={`${game.teams[0]} ${ps >= 0 ? "+" : ""}${ps}`}>
