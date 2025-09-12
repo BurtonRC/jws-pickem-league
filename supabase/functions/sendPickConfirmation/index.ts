@@ -2,11 +2,12 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 // CORS headers
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*", // Replace "*" with your frontend URL in production
+  "Access-Control-Allow-Origin": "*", // or "http://localhost:5173" for dev
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Content-Type": "application/json",
 };
+
 
 serve(async (req) => {
   // Handle preflight OPTIONS request
