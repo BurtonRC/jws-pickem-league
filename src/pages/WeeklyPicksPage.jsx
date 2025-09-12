@@ -506,19 +506,18 @@ const onSubmitFirst = async () => {
     // Send confirmation email via Edge Function
     try {
       await fetch("https://pliswiceskoebzcxbgwt.functions.supabase.co/sendPickConfirmation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", 
-        "Authorization": `Bearer ${session.access_token}` // <-- important
-        },
-        body: JSON.stringify({
-          email: user.email,
-          picks: Object.values(selectedTeams),
-          pointSpreads: pointSpreadSelection,
-          dbs: DBs,
-          survivorPick,
-          week: currentWeek.weekNumber,
-        }),
-      });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    email: user.email,
+    picks: Object.values(selectedTeams),
+    pointSpreads: pointSpreadSelection,
+    dbs: DBs,
+    survivorPick,
+    week: currentWeek.weekNumber,
+  }),
+});
+
 
       console.log("✅ Confirmation email sent (First game picks)");
     } catch (err) {
@@ -560,19 +559,18 @@ const onSubmitSecond = async () => {
     // Send confirmation email via Edge Function
     try {
       await fetch("https://pliswiceskoebzcxbgwt.functions.supabase.co/sendPickConfirmation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`, // <-- important
-         },
-        body: JSON.stringify({
-          email: user.email,
-          picks: Object.values(selectedTeams),
-          pointSpreads: pointSpreadSelection,
-          dbs: DBs,
-          survivorPick,
-          week: currentWeek.weekNumber,
-        }),
-      });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    email: user.email,
+    picks: Object.values(selectedTeams),
+    pointSpreads: pointSpreadSelection,
+    dbs: DBs,
+    survivorPick,
+    week: currentWeek.weekNumber,
+  }),
+});
+
 
       console.log("✅ Confirmation email sent (Rest of week picks)");
     } catch (err) {
