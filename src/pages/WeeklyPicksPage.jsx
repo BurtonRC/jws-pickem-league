@@ -508,7 +508,7 @@ const onSubmitFirst = async () => {
       await fetch("https://pliswiceskoebzcxbgwt.functions.supabase.co/sendPickConfirmation", {
         method: "POST",
         headers: { "Content-Type": "application/json", 
-        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`, // <-- important
+        "Authorization": `Bearer ${session.access_token}` // <-- important
         },
         body: JSON.stringify({
           email: user.email,
@@ -562,7 +562,7 @@ const onSubmitSecond = async () => {
       await fetch("https://pliswiceskoebzcxbgwt.functions.supabase.co/sendPickConfirmation", {
         method: "POST",
         headers: { "Content-Type": "application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`, // <-- important
+          "Authorization": `Bearer ${session.access_token}`, // <-- important
          },
         body: JSON.stringify({
           email: user.email,
