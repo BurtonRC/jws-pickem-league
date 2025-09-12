@@ -32,7 +32,7 @@ serve(async (req) => {
     }
 
     const apiKey = Deno.env.get("BREVO_API_KEY");
-    const fromEmail = Deno.env.get("FROM_EMAIL") || "no-reply@jwnflpickem.com";
+    const fromEmail = Deno.env.get("FROM_EMAIL") || "no-reply-confirm@jwnflpickem.com";
 
     if (!apiKey) {
       return new Response(
