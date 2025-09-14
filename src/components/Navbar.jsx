@@ -84,7 +84,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false, user, setM
     {/* Avatar circle with initials */}
         <button
           onClick={() => setMenuOpen((v) => !v)}
-          className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white text-white font-semibold focus:outline-none"
+          className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-white text-white font-semibold text-sm focus:outline-none"
           title={user?.username} // tooltip shows full name
         >
           {user?.username
@@ -127,7 +127,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false, user, setM
     aria-label="Toggle Menu"
   >
     <div
-      className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white text-white font-semibold"
+      className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-white text-white font-semibold text-sm"
       title={user?.username}
     >
       {user?.username
