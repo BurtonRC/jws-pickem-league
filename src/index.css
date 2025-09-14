@@ -74,3 +74,20 @@ body {
   }
 }
 
+/* Signout dropdown anim */
+@keyframes dropdown {
+  0% {
+    opacity: 0;
+    transform: translateY(-0.25rem) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-dropdown {
+  animation: dropdown 0.2s ease-out forwards;
+}
+
+

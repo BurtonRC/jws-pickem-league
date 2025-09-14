@@ -1,8 +1,14 @@
-import React, { useState } from "react";
+import React from "react";
 import { NavLink, Link } from "react-router-dom";
 
-export default function Navbar({ loggedIn, onLogout, minimal = false }) {
-  const [menuOpen, setMenuOpen] = useState(false);
+export default function Navbar({ loggedIn, onLogout, minimal = false, user, setMenuOpen, menuOpen }) {
+  // Convert username to initials
+  const initials = user?.username
+    ?.split(" ")
+    .map(name => name[0].toUpperCase())
+    .join("");
+
+
 
   // Hover color
   const hoverColorClass = "hover:text-[#f1f2f3]";
@@ -18,6 +24,19 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
 
   const logoPath = `${import.meta.env.BASE_URL}images/pickem-logo.png`;
 
+  // Links array for DRY rendering
+  const links = [
+    { to: "/home", label: "Home", authRequired: false },
+    { to: "/picks", label: "Weekly Picks", authRequired: true },
+    { to: "/leaderboard", label: "Leaderboard", authRequired: true },
+    { to: "/survivor", label: "Survivor", authRequired: true },
+    { to: "/wednesday-reports", label: "Wed Reports", authRequired: true },
+    { to: "/payments", label: "Payments", authRequired: true },
+    { to: "/comments", label: "Comments", authRequired: true },
+    { to: "/login", label: "Login", authRequired: false, hideIfLoggedIn: true },
+    { to: "/signup", label: "Sign Up", authRequired: false, hideIfLoggedIn: true },
+  ];
+
   return (
     <nav className="w-full bg-gray-900 text-white shadow z-50">
       <div
@@ -26,259 +45,137 @@ export default function Navbar({ loggedIn, onLogout, minimal = false }) {
       >
         {/* Left: logo + nav links */}
         <div className="flex items-center flex-1 min-w-0">
-  <Link to="/home" aria-label="Home" className="flex-shrink-0">
-  <img
-    src={logoPath}
-    alt="JWs PickEm League Logo"
-    className="h-10 sm:h-12 md:h-[4.4rem] w-auto"
-    style={{ paddingLeft: 0 }}
-  />
-</Link>
+          <Link to="/home" aria-label="Home" className="flex-shrink-0">
+            <img
+              src={logoPath}
+              alt="JWs PickEm League Logo"
+              className="h-10 sm:h-12 md:h-[4.4rem] w-auto"
+              style={{ paddingLeft: 0 }}
+            />
+          </Link>
 
           {/* Desktop nav links — hidden if minimal */}
-{!minimal && (
-  <div className="hidden md:flex items-center ml-6 flex-shrink overflow-hidden nav-link-small">
-    <NavLink
-      to="/home"
-      className={({ isActive }) =>
-        `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-      }
-      style={{ paddingTop: "17px", paddingBottom: "17px" }}
-    >
-      Home
-    </NavLink>
+          {!minimal && (
+            <div className="hidden md:flex items-center ml-6 flex-shrink overflow-hidden nav-link-small">
+              {links.map((link) => {
+                if (link.authRequired && !loggedIn) return null;
+                if (link.hideIfLoggedIn && loggedIn) return null;
 
-    {loggedIn && (
-      <>
-        <NavLink
-          to="/picks"
-          className={({ isActive }) =>
-            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-          }
-          style={{ paddingTop: "17px", paddingBottom: "17px" }}
-        >
-          Weekly Picks
-        </NavLink>
-        <NavLink
-          to="/leaderboard"
-          className={({ isActive }) =>
-            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-          }
-          style={{ paddingTop: "17px", paddingBottom: "17px" }}
-        >
-          Leaderboard
-        </NavLink>
-        <NavLink
-          to="/survivor"
-          className={({ isActive }) =>
-            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-          }
-          style={{ paddingTop: "17px", paddingBottom: "17px" }}
-        >
-          Survivor
-        </NavLink>
-        <NavLink
-          to="/wednesday-reports"
-          className={({ isActive }) =>
-            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-          }
-          style={{ paddingTop: "17px", paddingBottom: "17px" }}
-        >
-          Wed Reports
-        </NavLink>
-        <NavLink
-          to="/payments"
-          className={({ isActive }) =>
-            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-          }
-          style={{ paddingTop: "17px", paddingBottom: "17px" }}
-        >
-          Payments
-        </NavLink>
-        <NavLink
-          to="/comments"
-          className={({ isActive }) =>
-            `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-          }
-          style={{ paddingTop: "17px", paddingBottom: "17px" }}
-        >
-          Comments
-        </NavLink>
-      </>
-    )}
-
-              {!loggedIn && (
-                <>
+                return (
                   <NavLink
-                    to="/login"
+                    key={link.to}
+                    to={link.to}
                     className={({ isActive }) =>
                       `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
                     }
                     style={{ paddingTop: "17px", paddingBottom: "17px" }}
                   >
-                    Login
+                    {link.label}
                   </NavLink>
-                  <NavLink
-                    to="/signup"
-                    className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-                    }
-                    style={{ paddingTop: "17px", paddingBottom: "17px" }}
-                  >
-                    Sign Up
-                  </NavLink>
-                </>
-              )}
+                );
+              })}
             </div>
           )}
         </div>
 
-       {/* Right side logout — hidden if minimal */}
+        {/* Right side logout — hidden if minimal */}
+        {!minimal && loggedIn && (
+            <div className="relative ml-auto hidden md:block">
+    {/* Avatar circle with initials */}
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white text-white font-semibold focus:outline-none"
+          title={user?.username} // tooltip shows full name
+        >
+          {user?.username
+            ?.split(" ")
+            .map((n) => n[0].toUpperCase())
+            .join("")}
+        </button>
+
+        {/* Dropdown menu */}
+        {menuOpen && (
+          <div
+            className="absolute right-0 mt-2 w-32 bg-gray-800 border border-gray-700 rounded shadow-lg z-50
+                      transform transition-all duration-200 ease-out opacity-0 scale-95 animate-dropdown"
+            style={{ animationFillMode: "forwards" }}
+          >
+            <button
+              onClick={() => {
+                onLogout();
+                setMenuOpen(false);
+              }}
+              className="block w-full text-center px-4 py-2 font-semibold"
+              style={{
+                color: "#2dcbff",
+              }}
+              onMouseEnter={(e) => (e.target.style.color = "#90e3ffff")}
+              onMouseLeave={(e) => (e.target.style.color = "#2dcbff")}
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
+      </div>
+        )}
+
+        {/* Mobile avatar — replaces hamburger */}
 {!minimal && loggedIn && (
   <button
-    onClick={onLogout}
-    className="hidden md:block ml-auto logout-btn-small px-3 py-2 font-semibold text-red-400 hover:text-red-500 flex-shrink-0"
+    className="md:hidden focus:outline-none ml-auto"
+    onClick={() => setMenuOpen((v) => !v)}
+    aria-label="Toggle Menu"
   >
-    Log Out
+    <div
+      className="flex items-center justify-center w-9 h-9 rounded-full border-2 border-white text-white font-semibold"
+      title={user?.username}
+    >
+      {user?.username
+        ?.split(" ")
+        .map((n) => n[0].toUpperCase())
+        .join("")}
+    </div>
   </button>
 )}
-
-
-        {/* Mobile hamburger — hidden if minimal */}
-        {!minimal && (
-          <button
-            className="md:hidden focus:outline-none ml-auto"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Toggle Menu"
-          >
-            <svg
-              className="w-7 h-7"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              {menuOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
-          </button>
-        )}
       </div>
 
       {/* Mobile dropdown — hidden if minimal */}
       {!minimal && menuOpen && (
         <div className="md:hidden bg-gray-800 border-t border-gray-700">
           <div className="max-w-[70%] mx-auto px-4 py-2 space-y-2">
-            <NavLink
-              to="/home"
-              onClick={() => setMenuOpen(false)}
-              className={({ isActive }) =>
-                `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
-              }
-            >
-              Home
-            </NavLink>
+            {links.map((link) => {
+              if (link.authRequired && !loggedIn) return null;
+              if (link.hideIfLoggedIn && loggedIn) return null;
 
-            {loggedIn ? (
-              <>
+              return (
                 <NavLink
-                  to="/picks"
+                  key={link.to}
+                  to={link.to}
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
                     `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
                   }
                 >
-                  Weekly Picks
+                  {link.label}
                 </NavLink>
-                <NavLink
-                  to="/leaderboard"
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
-                  }
-                >
-                  Leaderboard
-                </NavLink>
-                <NavLink
-                  to="/survivor"
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
-                  }
-                >
-                  Survivor
-                </NavLink>
-                <NavLink
-                  to="/wednesday-reports"
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
-                  }
-                >
-                  Wed Reports
-                </NavLink>
-                <NavLink
-                  to="/payments"
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
-                  }
-                >
-                  Payments
-                </NavLink>
-                {/* NEW: Mobile Comments Page link */}
-                <NavLink
-                  to="/comments"
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
-                  }
-                >
-                  Comments
-                </NavLink>
-                <button
-                  onClick={() => {
-                    onLogout();
-                    setMenuOpen(false);
-                  }}
-                  className="w-full text-left px-2 py-2 font-semibold text-red-400 hover:text-red-500"
-                >
-                  Log Out
-                </button>
-              </>
-            ) : (
-              <>
-                <NavLink
-                  to="/login"
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
-                  }
-                >
-                  Login
-                </NavLink>
-                <NavLink
-                  to="/signup"
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
-                  }
-                >
-                  Sign Up
-                </NavLink>
-              </>
+              );
+            })}
+
+            {/* Mobile logout */}
+            {loggedIn && (
+              <button
+                onClick={() => {
+                  onLogout();
+                  setMenuOpen(false);
+                }}
+                className="w-full text-left px-0 py-2 font-regular"
+                style={{
+                color: "#2dcbff",
+              }}
+              
+              >
+                Sign Out
+              </button>
             )}
           </div>
         </div>

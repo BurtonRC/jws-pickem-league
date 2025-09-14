@@ -63,7 +63,7 @@ export default function App() {
   path="/home"
   element={
     user ? (
-      <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+      <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
         <HomePage user={user} />  {/* Pass user here */}
       </MainLayout>
     ) : (
@@ -76,7 +76,7 @@ export default function App() {
           path="/picks"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
                 <WeeklyPicksPage />
               </MainLayout>
             ) : (
@@ -88,7 +88,7 @@ export default function App() {
           path="/leaderboard"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
                 <LeaderboardPage />
               </MainLayout>
             ) : (
@@ -100,7 +100,7 @@ export default function App() {
           path="/survivor"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
                 <SurvivorPage />
               </MainLayout>
             ) : (
@@ -112,7 +112,7 @@ export default function App() {
           path="/wednesday-reports"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
                 <WednesdayReportsPage />
               </MainLayout>
             ) : (
@@ -124,7 +124,7 @@ export default function App() {
           path="/payments"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
                 <PaymentsPage />
               </MainLayout>
             ) : (
@@ -138,7 +138,7 @@ export default function App() {
   path="/comments"
   element={
     user ? (
-      <MainLayout loggedIn={!!user} onLogout={handleLogout}>
+      <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
         <CommentsPage user={user} />  {/* Pass user here */}
       </MainLayout>
     ) : (
