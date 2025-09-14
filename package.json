@@ -13,7 +13,7 @@
     "sync:week2": "node scripts/syncGameResults.js 2",
     "sync:week": "node scripts/syncGameResults.js",
     "supabase": "supabase",
-    "release": "node -e \"const os = require('os'); const shell = process.env.SHELL || process.env.ComSpec; if (shell && shell.toLowerCase().includes('powershell')) { const cp = require('child_process'); cp.spawnSync('powershell', ['./release.ps1'], { stdio: 'inherit' }); } else { const cp = require('child_process'); cp.spawnSync('bash', ['./release.sh'], { stdio: 'inherit' }); }\""
+    "release": "node -e \"const os = require('os'); const cp = require('child_process'); if (os.platform() === 'win32') { cp.spawnSync('powershell', ['./release.ps1'], { stdio: 'inherit' }); } else { cp.spawnSync('bash', ['./release.sh'], { stdio: 'inherit' }); }\""
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.5",
