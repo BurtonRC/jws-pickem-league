@@ -36,7 +36,7 @@ export default function HomePage({ user }) {
     fetchReport();
   }, []);
 
-  const previewComments = comments.slice(-3);
+  const previewComments = comments.slice(0, 3);
 
   return (
     <main className="w-full max-w-[100%] lg:max-w-[1024px] mx-auto px-[12px] lg:px-[40px] space-y-8">
