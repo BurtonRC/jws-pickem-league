@@ -100,40 +100,31 @@ const mergeReactions = async (baseComments) => {
   };
 
   // Add a new comment
-  const addComment = async (userId, content) => {
-    try {
-      // Insert into original comments table
-      const { data: insertedComment, error: insertError } = await supabase
-        .from("comments")
-        .insert([{ user_id: userId, content }])
-        .select("*")
-        .single();
+  const addComment = async (userId, content, parentCommentId = null) => {
+  try {
+    const { data: insertedComment, error: insertError } = await supabase
+      .from("comments")
+      .insert([{ user_id: userId, content, parent_comment_id: parentCommentId }])
+      .select("*")
+      .single();
 
-      if (insertError) throw insertError;
+    if (insertError) throw insertError;
 
-      // Fetch the inserted comment from the view to get the username
-      const { data, error: fetchError } = await supabase
-        .from("comments_with_username")
-        .select("*")
-        .eq("id", insertedComment.id)
-        .single();
+    // Fetch from view to get username
+    const { data, error: fetchError } = await supabase
+      .from("comments_with_username")
+      .select("*")
+      .eq("id", insertedComment.id)
+      .single();
 
-      if (fetchError) throw fetchError;
+    if (fetchError) throw fetchError;
 
-      // Always start with empty reactions if none
-      const merged = await mergeReactions([data]);
-      const withDefaults = {
-        ...merged[0],
-        reactionCounts: merged[0]?.reactionCounts ?? {},
-        userReaction: merged[0]?.userReaction ?? null,
-      };
-
-      setComments((prev) => [...prev, withDefaults]);
-      scrollToBottom();
-    } catch (err) {
-      console.error("Error adding comment:", err);
-    }
-  };
+    setComments((prev) => [...prev, data]);
+    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  } catch (err) {
+    console.error("Error adding comment:", err);
+  }
+};
 
   // Update a single comment in state (for optimistic updates)
   const updateComment = (commentId, updateFn) => {
