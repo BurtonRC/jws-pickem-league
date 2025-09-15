@@ -50,25 +50,25 @@ export default function LeaderboardPage() {
           Leaderboard
         </h1>
 
-        <table className="w-full table-fixed border-collapse text-center text-sm sm:text-base">
+        <table className="w-full table-fixed border-collapse text-sm sm:text-base">
           <thead>
             <tr className="bg-gray-100 sticky top-0 z-10">
-              <th className="p-3 border-b w-2/6 text-left font-semibold uppercase tracking-wide text-sm sm:text-base">
+              <th className="p-3 border-b w-3/8 text-left font-semibold uppercase tracking-wide text-xs sm:text-sm">
                 Name
               </th>
-              <th className="p-3 border-b w-1/6 text-right font-semibold uppercase tracking-wide text-sm sm:text-base">
+              <th className="p-3 border-b w-1/6 text-center font-semibold uppercase tracking-wide text-xs sm:text-sm">
                 Prev Week
               </th>
-              <th className="p-3 border-b w-1/6 text-right font-semibold uppercase tracking-wide text-sm sm:text-base">
+              <th className="p-3 border-b w-1/6 text-center font-semibold uppercase tracking-wide text-xs sm:text-sm">
                 This Week
               </th>
-              <th className="p-3 border-b w-1/6 text-right font-semibold uppercase tracking-wide text-sm sm:text-base">
+              <th className="p-3 border-b w-1/6 text-center font-semibold uppercase tracking-wide text-xs sm:text-sm">
                 Total
               </th>
-              <th className="p-3 border-b w-1/12 text-right font-semibold uppercase tracking-wide text-sm sm:text-base">
+              <th className="p-3 border-b w-1/12 text-center font-semibold uppercase tracking-wide text-xs sm:text-sm">
                 DB
               </th>
-              <th className="p-3 border-b w-2/6 text-right font-semibold uppercase tracking-wide text-sm sm:text-base">
+              <th className="p-3 px-2 border-b w-1/10 text-center font-semibold uppercase tracking-wide text-xs sm:text-sm">
                 PS
               </th>
             </tr>
@@ -86,11 +86,11 @@ export default function LeaderboardPage() {
                   className={`${bgColor} border-b hover:bg-gray-200 transition-colors duration-200`}
                 >
                   <td className="p-2 sm:p-3 text-left truncate">{user.username}</td>
-                  <td className="p-2 sm:p-3 text-right">{user.prevWeek}</td>
-                  <td className="p-2 sm:p-3 text-right">{user.thisWeek}</td>
-                  <td className="p-2 sm:p-3 text-right">{user.total}</td>
-                  <td className="p-2 sm:p-3 text-right">{user.db}</td>
-                  <td className="p-2 sm:p-3 text-right">{user.ps}</td>
+                  <td className="p-2 sm:p-3 text-center">{user.prevWeek}</td>
+                  <td className="p-2 sm:p-3 text-center">{user.thisWeek}</td>
+                  <td className="p-2 sm:p-3 text-center">{user.total}</td>
+                  <td className="p-2 sm:p-3 text-center">{user.db}</td>
+                  <td className="p-2 sm:p-3 px-2 text-center whitespace-nowrap">{user.ps}</td>
                 </tr>
               );
             })}
