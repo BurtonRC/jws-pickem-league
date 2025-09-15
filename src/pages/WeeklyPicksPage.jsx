@@ -45,6 +45,11 @@ export default function WeeklyPicksPage() {
   const [survivorPick, setSurvivorPick] = useState("");
   const [survivorLost, setSurvivorLost] = useState(false);
   const [pickedTeams, setPickedTeams] = useState([]);
+  const [survivorPicks, setSurvivorPicks] = useState([]);
+
+
+  // Auth user
+  const [user, setUser] = useState(null);
 
   // Modals
   const [warnOpen, setWarnOpen] = useState(false);
@@ -62,6 +67,30 @@ export default function WeeklyPicksPage() {
 
   // Helper: determine if a game is in the first submit group (Thu-Fri-Sat)
   const isFirstSubmitGame = (game) => ["Thu", "Fri", "Sat"].includes(game.day);
+
+  // Helper: check if a game's kickoff has already passed
+const hasGameStarted = (game) => {
+  if (!game.date) return false; // fallback if no date
+  return new Date(game.date) < new Date(); // true if in the past
+};
+
+// Map of previously picked teams (won) for the survivor dropdown
+const previousPickMap = useMemo(() => {
+  const map = {};
+  if (!survivorPicks || !currentWeek) return map;
+
+  survivorPicks
+    .filter(
+      (pick) =>
+        pick.week < currentWeek.weekNumber &&
+        pick.result?.toLowerCase() === "win"
+    )
+    .forEach((pick) => {
+      map[pick.team.trim().toLowerCase()] = true;
+    });
+
+  return map;
+}, [survivorPicks, currentWeek]);
 
 
   // TEMP: Log game IDs for leagueConfig
@@ -91,9 +120,6 @@ export default function WeeklyPicksPage() {
 
   fetchAndLogGameIDs();
 }, []);
-
-
-
 
 
 useEffect(() => {
@@ -168,10 +194,6 @@ useEffect(() => {
   fetchWeekGames();
 }, []);
 
-
-
-
-
 useEffect(() => {
   // Initialize sliderOn based on selectedTeams
   const initialSliders = {};
@@ -182,6 +204,38 @@ useEffect(() => {
   });
   setSliderOn(initialSliders);
 }, [games, selectedTeams]);
+
+// ✅ Get logged-in user from Supabase
+  useEffect(() => {
+    const getUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Error fetching user:", error);
+        return;
+      }
+      setUser(data.user);
+    };
+    getUser();
+  }, []);
+
+  // ✅ Fetch all past survivor picks for this user
+  useEffect(() => {
+  async function fetchSurvivorPicks() {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("survivor_picks")
+      .select("*")
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error fetching survivor picks:", error);
+    } else {
+      setSurvivorPicks(data);
+    }
+  }
+
+  fetchSurvivorPicks();
+}, [user]);
 
 
 
@@ -255,13 +309,11 @@ const firstLocked = submittedFirst || timeFirst === "Kickoff reached!";
 const secondLocked = submittedSecond || timeSecond === "Kickoff reached!";
 
 
-
 // Optional debug
 console.log("First group kickoff:", firstKickoff);
 console.log("Second group kickoff:", secondKickoff);
 console.log("First locked?", firstLocked);
 console.log("Second locked?", secondLocked);
-
 
 
   // Handlers
@@ -314,86 +366,93 @@ console.log("Second locked?", secondLocked);
 };
 
 
-  const validateSecond = () => {
-    const msgs = [];
-    const rest = games.slice(1);
+const validateSecond = () => {
+  const msgs = [];
+  const rest = games.slice(1); // all but first game
 
-    let missingTeams = 0;
-    let missingPS = 0;
+  let missingTeams = 0;
+  let missingPS = 0;
 
-    rest.forEach((g) => {
+  rest.forEach((g) => {
+    // ✅ Only require picks for games that haven't started
+    if (!hasGameStarted(g)) {
       if (!selectedTeams[g.id]) missingTeams++;
       if (g.pointSpread?.length && !pointSpreadSelection[g.id]) missingPS++;
-    });
+    }
+  });
 
-    if (missingTeams)
-      msgs.push(
-        missingTeams === 1
-          ? "Select the remaining game winner."
-          : `Select all remaining game winners (${missingTeams} missing).`
-      );
+  if (missingTeams)
+    msgs.push(
+      missingTeams === 1
+        ? "Select the remaining game winner."
+        : `Select all remaining game winners (${missingTeams} missing).`
+    );
 
-    if (missingPS)
-      msgs.push(
-        missingPS === 1
-          ? "Select the remaining point spread."
-          : `Select all remaining point spreads (${missingPS} missing).`
-      );
+  if (missingPS)
+    msgs.push(
+      missingPS === 1
+        ? "Select the remaining point spread."
+        : `Select all remaining point spreads (${missingPS} missing).`
+    );
 
-    const driveByOK = games.some((g) => {
-      // Check if the selected team for this game matches its DB
-      return selectedTeams[g.id] === g.dbTeam;
-    });
-    if (!driveByOK) msgs.push("Select at least one Drive-By for the week.");
+  const driveByOK = games.some((g) => {
+    // ✅ only count DBs for games still open
+    return !hasGameStarted(g) && selectedTeams[g.id] === g.dbTeam;
+  });
+  if (!driveByOK) msgs.push("Select at least one Drive-By for the week.");
+
+  // ✅ Survivor check only if alive
+  if (!survivorLost && !survivorPick) msgs.push("Select your Survivor pick.");
+
+  return msgs;
+};
 
 
-    if (!survivorLost && !survivorPick) msgs.push("Select your Survivor pick.");
-
-    return msgs;
-  };
 
       // Fetch existing picks + survivor pick so the page state reflects previously submitted picks
 const loadExistingPicks = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
     if (!currentWeek?.weekNumber) return;
     const weekNum = currentWeek.weekNumber;
 
     // Fetch weekly picks
     const { data: existingData, error: fetchError } = await supabase
-  .from("weekly_picks")
-  .select("picks, point_spreads, dbs")
-  .eq("user_id", user.id)
-  .eq("week", weekNum)
-  .maybeSingle(); // <-- does not throw if row is missing
-
+      .from("weekly_picks")
+      .select("picks, point_spreads, dbs")
+      .eq("user_id", user.id)
+      .eq("week", weekNum)
+      .maybeSingle(); // <-- safe if row missing
 
     if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
-    // Load existing picks into state
     setSelectedTeams(existingData?.picks || {});
     setPointSpreadSelection(existingData?.point_spreads || {});
-    setDBs(existingData?.dbs || {}); // restores DBs correctly
+    setDBs(existingData?.dbs || {});
 
-    // Fetch survivor pick separately
+    // Fetch survivor pick
     const { data: survivorData } = await supabase
-  .from("survivor_picks")
-  .select("team")
-  .eq("user_id", user.id)
-  .eq("week", weekNum)
-  .maybeSingle(); // <-- safe if row missing
-
+      .from("survivor_picks")
+      .select("team")
+      .eq("user_id", user.id)
+      .eq("week", weekNum)
+      .maybeSingle();
 
     setSurvivorPick(survivorData?.team || "");
 
     // Track previously picked teams to disable them in the survivor select
-    if (survivorData?.team) {
-      setPickedTeams([survivorData.team]);
-    } else {
-      setPickedTeams([]);
-    }
+    if (survivorData?.team) setPickedTeams([survivorData.team]);
+    else setPickedTeams([]);
+
+    // ✅ Fetch survivor status to determine if user lost
+    const { data: statusData } = await supabase
+      .from("survivor_status")
+      .select("eliminated")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    setSurvivorLost(statusData?.eliminated || false); // <-- this sets the lost state
 
     // Lock first/second submits based on existing picks
     if (Object.keys(existingData?.picks || {}).length) setSubmittedFirst(true);
@@ -403,7 +462,6 @@ const loadExistingPicks = async () => {
     console.error("Error loading existing picks:", err.message || err);
   }
 };
-
 
 
     // This calls loadExistingPicks function
@@ -479,9 +537,6 @@ const loadExistingPicks = async () => {
         throw err;
       }
     };
-
-
-
 
 
 // ---- Submit First Game(s) ----
@@ -630,179 +685,39 @@ if (!games || !games.length) {
               <th className="p-3 text-left w-1/4">Select</th>
             </tr>
           </thead>
-          <tbody>
+<tbody>
 {(() => {
-    const lastFirstIndex = Math.max(
-      ...games.map((g, idx) => (["Thu", "Fri", "Sat"].includes(g.day) ? idx : -1))
-    );
+  // Compute last Thu/Fri/Sat index
+  const lastFirstIndex = Math.max(
+    ...games.map((g, idx) => (["Thu", "Fri", "Sat"].includes(g.day) ? idx : -1))
+  );
 
-    // Map all games into rows
-    return games.map((game, idx) => {
-      const locked = isFirstSubmitGame(game) ? firstLocked : secondLocked;
+  return games.map((game, idx) => {
+    const locked = isFirstSubmitGame(game) ? firstLocked : secondLocked;
 
-      return (
-        <React.Fragment key={game.id}>
-          {/* Matchup row */}
-          <tr>
-            <td className="p-3">{game.teams[0]} at {game.teams[1]}</td>
+    return (
+      <React.Fragment key={game.id}>
+        {/* ===== MATCHUP ROW ===== */}
+        <tr>
+          {/* Matchup */}
+          <td className="p-3">{game.teams[0]} at {game.teams[1]}</td>
 
-            {/* Day */}
-            <td className="p-3">
-  {game.day /* e.g., "Thu", "Fri", "Sat" */}
-</td>
+          {/* Day */}
+          <td className="p-3">{game.day}</td>
 
+          {/* Drive-By toggle */}
+          <td className="p-3">{DBToggle(game, locked)}</td>
 
-
-            {/* Drive-By toggle */}
-            <td className="p-3">{DBToggle(game, locked)}</td>
-
-            {/* Point Spread select */}
-            <td className="p-3">
-              {game.pointSpread?.length > 0 && (
-                <select
-                  className={`border rounded p-1 w-full ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
-                  value={pointSpreadSelection[game.id] || ""}
-                  onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
-                  disabled={locked}
-                >
-                  <option value="">-- Disruptor Point Spread --</option>
-                  {game.pointSpread.map((ps, psIdx) => (
-                    <React.Fragment key={psIdx}>
-                      <option value={`${game.teams[0]} ${ps >= 0 ? "+" : ""}${ps}`}>
-                        {game.teams[0]} {ps >= 0 ? "+" : ""}{ps}
-                      </option>
-                      <option value={`${game.teams[1]} ${ps <= 0 ? "+" : ""}${-ps}`}>
-                        {game.teams[1]} {ps <= 0 ? "+" : ""}{-ps}
-                      </option>
-                    </React.Fragment>
-                  ))}
-                </select>
-              )}
-            </td>
-
-            {/* Team selection */}
-            <td className="p-3">
-              <select
-                className={`border rounded p-1 w-full ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
-                value={selectedTeams[game.id] || ""}
-                onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
-                disabled={locked}
-              >
-                <option value="">-- Select Team --</option>
-                {game.teams.map((team) => (
-                  <option key={team} value={team}>{team}</option>
-                ))}
-              </select>
-            </td>
-          </tr>
-
-          {/* Insert Submit First Game(s) button after the last Thu/Fri/Sat game */}
-          {idx === lastFirstIndex && (
-            <tr>
-              <td colSpan={5} className="p-3">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg bg-white border p-3">
-                  <span className="font-semibold">{timeFirst || "Kickoff time TBD"}</span>
-                  <button
-                    onClick={onSubmitFirst}
-                    disabled={firstLocked}
-                    className={`px-4 py-2 rounded font-semibold text-white transition
-                      ${firstLocked ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600 active:bg-green-700"}`}
-                  >
-                    Submit First Game(s)
-                  </button>
-                </div>
-              </td>
-            </tr>
-          )}
-        </React.Fragment>
-      );
-    });
-  })()}
-
-            {/* Survivor row after rest of games */}
-            {!survivorLost && (
-              <tr className="bg-gray-50">
-                <td colSpan={4} className="p-3 font-semibold">
-                  Survivor Pick:
-                </td>
-                <td className="p-3">
-                  <select
-                    className={`border rounded p-1 w-full ${
-                      survivorPick ? "bg-yellow-200" : ""
-                    } ${secondLocked ? "opacity-60" : ""}`}
-                    value={survivorPick}
-                    onChange={(e) => setSurvivorPick(e.target.value)}
-                    disabled={secondLocked}
-                  >
-                    <option value="">-- Select Team --</option>
-                    {allTeams.map((team) => (
-                      <option
-                        key={team}
-                        value={team}
-                        disabled={pickedTeams.includes(team)}
-                        style={pickedTeams.includes(team) ? { color: "gray" } : {}}
-                      >
-                        {team} {pickedTeams.includes(team) ? "(used)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-            )}
-
-            {/* Submit #2 row (timer + button) */}
-            {games.length > 1 && (
-              <tr>
-                <td colSpan={5} className="p-3">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg bg-white border p-3">
-                    <span className="font-semibold">
-                      {timeSecond || "Kickoff time TBD"}
-                    </span>
-                    <button
-                      onClick={onSubmitSecond}
-                      disabled={secondLocked}
-                      className={`px-4 py-2 rounded font-semibold text-white transition
-                        ${secondLocked ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 active:bg-blue-700"}`}
-                    >
-                      Submit Rest of Picks
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-
-{/* ===== MOBILE CARDS ===== */}
-<div className="md:hidden space-y-4">
-  {(() => {
-    // Compute last Thu/Fri/Sat index in sorted games
-    const lastFirstIndex = Math.max(
-      ...games.map((g, idx) => (["Thu", "Fri", "Sat"].includes(g.day) ? idx : -1))
-    );
-
-    return games.map((game, idx) => {
-      const locked = isFirstSubmitGame(game) ? firstLocked : secondLocked;
-
-      return (
-        <React.Fragment key={game.id}>
-          {/* Game card */}
-          <div className="bg-white p-3 rounded shadow">
-            <div className="font-semibold">{game.teams[0]} at {game.teams[1]}</div>
-            <div>Day: {game.day}</div>
-
-            {/* Drive-By toggle */}
-            {DBToggle(game, locked)}
-
-            {/* Point Spread select */}
+          {/* Point Spread select */}
+          <td className="p-3">
             {game.pointSpread?.length > 0 && (
               <select
-                className={`border rounded p-1 w-full mt-2 ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
+                className={`border rounded p-1 w-full ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
                 value={pointSpreadSelection[game.id] || ""}
                 onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
                 disabled={locked}
               >
-                <option value="">-- Select Point Spread --</option>
+                <option value="">-- Disruptor Point Spread --</option>
                 {game.pointSpread.map((ps, psIdx) => (
                   <React.Fragment key={psIdx}>
                     <option value={`${game.teams[0]} ${ps >= 0 ? "+" : ""}${ps}`}>
@@ -815,10 +730,12 @@ if (!games || !games.length) {
                 ))}
               </select>
             )}
+          </td>
 
-            {/* Team selection */}
+          {/* Team selection */}
+          <td className="p-3">
             <select
-              className={`border rounded p-1 w-full mt-2 ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
+              className={`border rounded p-1 w-full ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
               value={selectedTeams[game.id] || ""}
               onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
               disabled={locked}
@@ -828,53 +745,196 @@ if (!games || !games.length) {
                 <option key={team} value={team}>{team}</option>
               ))}
             </select>
-          </div>
+          </td>
+        </tr>
 
-          {/* Insert Submit First Game(s) card after last Thu/Fri/Sat */}
-          {idx === lastFirstIndex && (
-            <div className="bg-white p-3 rounded shadow flex flex-col gap-3">
-              <span className="font-semibold">{timeFirst || "Kickoff time TBD"}</span>
-              <button
-                onClick={onSubmitFirst}
-                disabled={firstLocked}
-                className={`w-full px-4 py-2 rounded font-semibold text-white transition
-                  ${firstLocked ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600 active:bg-green-700"}`}
-              >
-                Submit First Game(s)
-              </button>
-            </div>
-          )}
-        </React.Fragment>
-      );
-    });
-  })()}
+        {/* ===== SUBMIT FIRST GAME(S) BUTTON ROW ===== */}
+        {idx === lastFirstIndex && (
+          <tr>
+            <td colSpan={5} className="p-3">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg bg-white border p-3">
+                <span className="font-semibold">{timeFirst || "Kickoff time TBD"}</span>
+                <button
+                  onClick={onSubmitFirst}
+                  disabled={firstLocked}
+                  className={`px-4 py-2 rounded font-semibold text-white transition
+                    ${firstLocked ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600 active:bg-green-700"}`}
+                >
+                  Submit First Game(s)
+                </button>
+              </div>
+            </td>
+          </tr>
+        )}
+      </React.Fragment>
+    );
+  });
+})()}
 
-  {/* Survivor pick card */}
-  {!survivorLost && (
-    <div className="bg-white p-3 rounded shadow">
-      <div className="font-semibold">Survivor Pick:</div>
-      <select
-        className={`border rounded p-1 w-full mt-2 ${survivorPick ? "bg-yellow-200" : ""} ${secondLocked ? "opacity-60" : ""}`}
-        value={survivorPick}
-        onChange={(e) => setSurvivorPick(e.target.value)}
-        disabled={secondLocked}
-      >
-        <option value="">-- Select Team --</option>
-        {allTeams.map((team) => (
+{/* ===== SURVIVOR ROW - DESKTOP ===== */}
+{!survivorLost && (
+<tr className="bg-gray-50">
+  <td colSpan={4} className="p-3 font-semibold">
+    Survivor Pick:
+  </td>
+  <td className="p-3">
+    <select
+      className={`border rounded p-1 w-full ${
+        survivorPick ? "bg-yellow-200" : ""
+      } ${secondLocked || survivorLost ? "opacity-60 cursor-not-allowed" : ""}`}
+      value={survivorPick}
+      onChange={(e) => setSurvivorPick(e.target.value)}
+      disabled={secondLocked || survivorLost}
+    >
+      <option value="">-- Select Team --</option>
+
+      {allTeams.map((team) => {
+        const isUsed = previousPickMap[team.trim().toLowerCase()] || false;
+
+        return (
           <option
             key={team}
             value={team}
-            disabled={pickedTeams.includes(team)}
-            style={pickedTeams.includes(team) ? { color: "gray" } : {}}
+            disabled={isUsed || survivorLost}
+            style={isUsed ? { color: "gray" } : {}}
           >
-            {team} {pickedTeams.includes(team) ? "(used)" : ""}
+            {team} {isUsed ? "(used)" : ""}
           </option>
-        ))}
-      </select>
-    </div>
-  )}
+        );
+      })}
+    </select>
+  </td>
+</tr>
+)}
 
-  {/* Submit #2 card (rest of week) */}
+
+{/* ===== SUBMIT SECOND BUTTON ROW ===== */}
+{games.length > 1 && (
+  <tr>
+    <td colSpan={5} className="p-3">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg bg-white border p-3">
+        <span className="font-semibold">{timeSecond || "Kickoff time TBD"}</span>
+        <button
+          onClick={onSubmitSecond}
+          disabled={secondLocked}
+          className={`px-4 py-2 rounded font-semibold text-white transition
+            ${secondLocked ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 active:bg-blue-700"}`}
+        >
+          Submit Rest of Picks
+        </button>
+      </div>
+    </td>
+  </tr>
+)}
+</tbody>
+</table>
+
+{/* ===== MOBILE CARDS ===== */}
+<div className="md:hidden space-y-4">
+  {games.map((game, idx) => {
+    const locked = isFirstSubmitGame(game) ? firstLocked : secondLocked;
+    const lastFirstIndex = Math.max(
+      ...games.map((g, i) => (["Thu", "Fri", "Sat"].includes(g.day) ? i : -1))
+    );
+
+    return (
+      <React.Fragment key={game.id}>
+        {/* Game card */}
+        <div className="bg-white p-3 rounded shadow">
+          <div className="font-semibold">{game.teams[0]} at {game.teams[1]}</div>
+          <div>Day: {game.day}</div>
+
+          {/* Drive-By toggle */}
+          {DBToggle(game, locked)}
+
+          {/* Point Spread select */}
+          {game.pointSpread?.length > 0 && (
+            <select
+              className={`border rounded p-1 w-full mt-2 ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
+              value={pointSpreadSelection[game.id] || ""}
+              onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
+              disabled={locked}
+            >
+              <option value="">-- Select Point Spread --</option>
+              {game.pointSpread.map((ps, psIdx) => (
+                <React.Fragment key={psIdx}>
+                  <option value={`${game.teams[0]} ${ps >= 0 ? "+" : ""}${ps}`}>
+                    {game.teams[0]} {ps >= 0 ? "+" : ""}{ps}
+                  </option>
+                  <option value={`${game.teams[1]} ${ps <= 0 ? "+" : ""}${-ps}`}>
+                    {game.teams[1]} {ps <= 0 ? "+" : ""}{-ps}
+                  </option>
+                </React.Fragment>
+              ))}
+            </select>
+          )}
+
+          {/* Team selection */}
+          <select
+            className={`border rounded p-1 w-full mt-2 ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
+            value={selectedTeams[game.id] || ""}
+            onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
+            disabled={locked}
+          >
+            <option value="">-- Select Team --</option>
+            {game.teams.map((team) => (
+              <option key={team} value={team}>{team}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Submit First Game(s) card */}
+        {idx === lastFirstIndex && (
+          <div className="bg-white p-3 rounded shadow flex flex-col gap-3">
+            <span className="font-semibold">{timeFirst || "Kickoff time TBD"}</span>
+            <button
+              onClick={onSubmitFirst}
+              disabled={firstLocked}
+              className={`w-full px-4 py-2 rounded font-semibold text-white transition
+                ${firstLocked ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600 active:bg-green-700"}`}
+            >
+              Submit First Game(s)
+            </button>
+          </div>
+        )}
+      </React.Fragment>
+    );
+  })}
+
+{/* Survivor Pick Card / Mobile */}
+{!survivorLost && (
+  <div className="bg-white p-3 rounded shadow mb-4">
+    <div className="font-semibold">Survivor Pick:</div>
+    <select
+      className={`border rounded p-2 w-full min-w-[200px] ${
+        survivorPick ? "bg-yellow-200" : ""
+      } ${secondLocked || survivorLost ? "opacity-60 cursor-not-allowed" : ""}`}
+      value={survivorPick}
+      onChange={(e) => setSurvivorPick(e.target.value)}
+      disabled={secondLocked || survivorLost}
+    >
+      <option value="">-- Select Team --</option>
+
+      {allTeams.map((team) => {
+        const isUsed = previousPickMap[team.trim().toLowerCase()] || false;
+
+        return (
+          <option
+            key={team}
+            value={team}
+            disabled={isUsed || survivorLost}
+            style={isUsed ? { color: "gray" } : {}}
+          >
+            {team} {isUsed ? "(used)" : ""}
+          </option>
+        );
+      })}
+    </select>
+  </div>
+)}
+
+
+  {/* Submit Rest of Picks card */}
   {games.length > 1 && (
     <div className="bg-white p-3 rounded shadow flex flex-col gap-3">
       <span className="font-semibold">{timeSecond || "Kickoff time TBD"}</span>
@@ -889,6 +949,7 @@ if (!games || !games.length) {
     </div>
   )}
 </div>
+
 
         {/* Warning + Confirmation Modals */}
         <WarningModal
@@ -905,3 +966,4 @@ if (!games || !games.length) {
     </div>
   );
 }
+
