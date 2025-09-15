@@ -85,7 +85,7 @@ const mergeReactions = async (baseComments) => {
       const { data, error } = await supabase
         .from("comments_with_username")
         .select("*")
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
