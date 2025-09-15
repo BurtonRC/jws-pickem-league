@@ -3,7 +3,7 @@ import { useComments } from "../context/CommentsContext";
 import { toggleReaction } from "../lib/reactions"; // <-- ensure this file exists
 
 export default function CommentsPage({ user }) {
-  const { comments, addComment, loading, commentsEndRef, fetchComments, updateComment } = useComments();
+  const { comments, addComment, loading, commentsEndRef, updateComment } = useComments();
   const [newComment, setNewComment] = useState("");
   const [replyingCommentId, setReplyingCommentId] = useState(null);
   const [replyText, setReplyText] = useState("");
@@ -112,15 +112,6 @@ export default function CommentsPage({ user }) {
     );
   }
 
-  // Map replies to their parent comment
-  const repliesMap = {};
-  comments.forEach((c) => {
-    if (c.parent_comment_id) {
-      if (!repliesMap[c.parent_comment_id]) repliesMap[c.parent_comment_id] = [];
-      repliesMap[c.parent_comment_id].push(c);
-    }
-  });
-
   return (
     <main className="w-full max-w-[800px] mx-auto p-6 space-y-6">
       <h2 className="text-2xl font-bold">Comments</h2>
@@ -205,7 +196,7 @@ export default function CommentsPage({ user }) {
                 )}
 
                 {/* Render replies */}
-                {repliesMap[c.id]?.map((r) => (
+                {c.replies?.map((r) => (
                   <div
                     key={r.id}
                     className="ml-4 mt-1 p-2 bg-gray-50 rounded-lg border-l-2 border-gray-300"
@@ -224,7 +215,6 @@ export default function CommentsPage({ user }) {
                         hour12: false,
                       })}
                     </p>
-                    {/* Reactions on replies */}
                     <ReactionButtons comment={r} user={user} onReact={handleReact} />
                   </div>
                 ))}

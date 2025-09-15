@@ -17,11 +17,12 @@ export function CommentsProvider({ children }) {
   const commentsEndRef = useRef(null);
 
   // Scroll to bottom helper
-  const scrollToBottom = () => {
-    if (commentsEndRef.current) {
-      commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  };
+  // Removed auto-scroll to prevent jumping on new comments/replies
+  // const scrollToBottom = () => {
+  //   if (commentsEndRef.current) {
+  //     commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
+  //   }
+  // };
 
 // Helper: fetch reactions and merge into comments
 const mergeReactions = async (baseComments) => {
@@ -30,19 +31,19 @@ const mergeReactions = async (baseComments) => {
   const commentIds = baseComments.map((c) => c.id);
 
   // Fetch all reactions for these comments
-  const { data: reactions, error: reactionError } = await supabase
+  const { data: reactionData, error: reactionError } = await supabase
     .from("comment_reactions")
-    .select("*")
+    .select("comment_id, reaction_type")
     .in("comment_id", commentIds);
 
   if (reactionError) {
-    console.error("Error fetching reactions:", reactionError);
+    console.error("Error fetching reaction counts:", reactionError);
   }
 
-  // Build counts per comment in JS
-  const countsMap = {}; // { commentId: { reactionType: count } }
-  reactions?.forEach((r) => {
-    if (!countsMap[r.comment_id]) countsMap[r.comment_id] = {};
+  // Aggregate counts in JS
+  const countsMap = {};
+  reactionData?.forEach((r) => {
+    countsMap[r.comment_id] = countsMap[r.comment_id] || {};
     countsMap[r.comment_id][r.reaction_type] =
       (countsMap[r.comment_id][r.reaction_type] || 0) + 1;
   });
@@ -73,6 +74,8 @@ const mergeReactions = async (baseComments) => {
       ...c,
       reactionCounts: counts,
       userReaction: userReaction?.reaction_type ?? null,
+      // Keep replies array for your replies system
+      replies: [],
     };
   });
 };
@@ -85,13 +88,33 @@ const mergeReactions = async (baseComments) => {
       const { data, error } = await supabase
         .from("comments_with_username")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
 
       const merged = await mergeReactions(data);
-      setComments(merged);
-      scrollToBottom();
+
+      // Build nested replies
+      const nestedComments = [];
+      const mapById = {};
+      merged.forEach((c) => {
+        mapById[c.id] = c;
+        if (c.parent_comment_id) {
+          const parent = mapById[c.parent_comment_id];
+          if (parent) {
+            parent.replies = parent.replies || [];
+            // newest replies at the top
+            parent.replies = [c, ...parent.replies];
+          }
+        } else {
+          // newest top-level comments at the top
+          nestedComments.unshift(c);
+        }
+      });
+
+      setComments(nestedComments);
+
+      // scrollToBottom(); // removed to stop page jumping
     } catch (err) {
       console.error("Error fetching comments:", err);
     } finally {
@@ -99,37 +122,70 @@ const mergeReactions = async (baseComments) => {
     }
   };
 
-  // Add a new comment
-  const addComment = async (userId, content, parentCommentId = null) => {
-  try {
-    const { data: insertedComment, error: insertError } = await supabase
-      .from("comments")
-      .insert([{ user_id: userId, content, parent_comment_id: parentCommentId }])
-      .select("*")
-      .single();
+  // Add a new comment (supports replies)
+  const addComment = async (userId, content, parentId = null) => {
+    try {
+      const { data: insertedComment, error: insertError } = await supabase
+        .from("comments")
+        .insert([{ user_id: userId, content, parent_comment_id: parentId }])
+        .select("*")
+        .single();
 
-    if (insertError) throw insertError;
+      if (insertError) throw insertError;
 
-    // Fetch from view to get username
-    const { data, error: fetchError } = await supabase
-      .from("comments_with_username")
-      .select("*")
-      .eq("id", insertedComment.id)
-      .single();
+      // Fetch the inserted comment with username and reactions
+      const { data, error: fetchError } = await supabase
+        .from("comments_with_username")
+        .select("*")
+        .eq("id", insertedComment.id)
+        .single();
 
-    if (fetchError) throw fetchError;
+      if (fetchError) throw fetchError;
 
-    setComments((prev) => [...prev, data]);
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  } catch (err) {
-    console.error("Error adding comment:", err);
-  }
-};
+      const mergedComment = (await mergeReactions([data]))[0];
 
-  // Update a single comment in state (for optimistic updates)
+      if (parentId) {
+        // Add reply to parent comment (newest on top)
+        setComments((prev) =>
+          prev.map((c) => {
+            if (c.id === parentId) {
+              return {
+                ...c,
+                replies: [mergedComment, ...(c.replies || [])],
+              };
+            }
+            return c;
+          })
+        );
+      } else {
+        // Add top-level comment (newest on top)
+        setComments((prev) => [mergedComment, ...prev]);
+      }
+
+      // scrollToBottom(); // removed to prevent jumping
+    } catch (err) {
+      console.error("Error adding comment:", err);
+    }
+  };
+
+  // Update a single comment in state (used for optimistic reactions)
   const updateComment = (commentId, updateFn) => {
     setComments((prev) =>
-      prev.map((c) => (c.id === commentId ? updateFn(c) : c))
+      prev.map((c) => {
+        if (c.id === commentId) {
+          return updateFn(c);
+        }
+        // also check in replies
+        if (c.replies?.length) {
+          return {
+            ...c,
+            replies: c.replies.map((r) =>
+              r.id === commentId ? updateFn(r) : r
+            ),
+          };
+        }
+        return c;
+      })
     );
   };
 
@@ -151,16 +207,24 @@ const mergeReactions = async (baseComments) => {
               .single();
             if (error) throw error;
 
-            // Merge reactions with defaults
-            const merged = await mergeReactions([data]);
-            const withDefaults = {
-              ...merged[0],
-              reactionCounts: merged[0]?.reactionCounts ?? {},
-              userReaction: merged[0]?.userReaction ?? null,
-            };
+            const mergedComment = (await mergeReactions([data]))[0];
 
-            setComments((prev) => [...prev, withDefaults]);
-            scrollToBottom();
+            if (mergedComment.parent_comment_id) {
+              setComments((prev) =>
+                prev.map((c) => {
+                  if (c.id === mergedComment.parent_comment_id) {
+                    return {
+                      ...c,
+                      replies: [mergedComment, ...(c.replies || [])],
+                    };
+                  }
+                  return c;
+                })
+              );
+            } else {
+              setComments((prev) => [mergedComment, ...prev]);
+            }
+            // scrollToBottom(); // removed
           } catch (err) {
             console.error("Error fetching new comment:", err);
           }
@@ -175,14 +239,7 @@ const mergeReactions = async (baseComments) => {
 
   return (
     <CommentsContext.Provider
-      value={{
-        comments,
-        addComment,
-        loading,
-        commentsEndRef,
-        fetchComments,
-        updateComment, // exposed for optimistic updates
-      }}
+      value={{ comments, addComment, loading, commentsEndRef, fetchComments, updateComment }}
     >
       {children}
     </CommentsContext.Provider>
