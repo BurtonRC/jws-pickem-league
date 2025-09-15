@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useComments } from "../context/CommentsContext";
+import { toggleReaction } from "../lib/reactions"; // <-- ensure this file exists
 
 export default function CommentsPage({ user }) {
-  const { comments, addComment, loading, commentsEndRef } = useComments();
+  const { comments, addComment, loading, commentsEndRef, fetchComments, updateComment } = useComments();
   const [newComment, setNewComment] = useState("");
   const textareaRef = useRef(null);
 
@@ -35,6 +36,69 @@ export default function CommentsPage({ user }) {
   };
 
   const parseTimestamp = (ts) => new Date(ts.includes("T") ? ts : ts + "Z");
+
+  // Handle reaction toggle + optimistic UI update
+  const handleReact = async (commentId, reactionType) => {
+  // Optimistic update
+  updateComment(commentId, (c) => {
+    const newCounts = { ...c.reactionCounts };
+    let newReaction = reactionType;
+
+    if (c.userReaction === reactionType) {
+      // Toggle off
+      newReaction = null;
+      newCounts[reactionType] = (newCounts[reactionType] || 1) - 1;
+      if (newCounts[reactionType] <= 0) delete newCounts[reactionType];
+    } else {
+      // Switching reactions
+      if (c.userReaction) {
+        newCounts[c.userReaction] = (newCounts[c.userReaction] || 1) - 1;
+        if (newCounts[c.userReaction] <= 0) delete newCounts[c.userReaction];
+      }
+      newCounts[reactionType] = (newCounts[reactionType] || 0) + 1;
+    }
+
+    return { ...c, userReaction: newReaction, reactionCounts: newCounts };
+  });
+
+  // Update Supabase in the background
+  await toggleReaction(commentId, user.id, reactionType);
+
+  // ✅ Removed fetchComments() to stop full page reload
+};
+
+
+  // Reaction buttons component
+  function ReactionButtons({ comment, user, onReact }) {
+  const reactions = ["like", "love", "laugh", "wow"];
+  const icons = { like: "👍", love: "❤️", laugh: "😂", wow: "😮" };
+
+  return (
+    <div className="flex gap-1 mt-1">
+      {reactions.map((r) => {
+        const isActive = comment.userReaction === r;
+        return (
+          <button
+            key={r}
+            onClick={() => onReact(comment.id, r)}
+            className={`
+              flex items-center text-xs gap-0.5 px-0.5 py-0.25 rounded
+              ${isActive ? "text-blue-600" : "text-gray-600"}
+              hover:text-blue-500
+              transition-colors duration-150
+            `}
+          >
+            <span className="text-sm">{icons[r]}</span>
+            <span>{comment.reactionCounts?.[r] ?? 0}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+
+
 
   return (
     <main className="w-full max-w-[800px] mx-auto p-6 space-y-6">
@@ -79,6 +143,9 @@ export default function CommentsPage({ user }) {
                   hour12: false,
                 })}
               </p>
+
+              {/* Reactions */}
+              <ReactionButtons comment={c} user={user} onReact={handleReact} />
             </div>
           ))}
           <div ref={commentsEndRef} />

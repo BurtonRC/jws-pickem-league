@@ -23,6 +23,61 @@ export function CommentsProvider({ children }) {
     }
   };
 
+// Helper: fetch reactions and merge into comments
+const mergeReactions = async (baseComments) => {
+  if (!baseComments.length) return baseComments;
+
+  const commentIds = baseComments.map((c) => c.id);
+
+  // Fetch all reactions for these comments
+  const { data: reactions, error: reactionError } = await supabase
+    .from("comment_reactions")
+    .select("*")
+    .in("comment_id", commentIds);
+
+  if (reactionError) {
+    console.error("Error fetching reactions:", reactionError);
+  }
+
+  // Build counts per comment in JS
+  const countsMap = {}; // { commentId: { reactionType: count } }
+  reactions?.forEach((r) => {
+    if (!countsMap[r.comment_id]) countsMap[r.comment_id] = {};
+    countsMap[r.comment_id][r.reaction_type] =
+      (countsMap[r.comment_id][r.reaction_type] || 0) + 1;
+  });
+
+  // Get current user's reactions
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let userReactions = [];
+  if (user) {
+    const { data: urData, error: urError } = await supabase
+      .from("comment_reactions")
+      .select("comment_id, reaction_type")
+      .eq("user_id", user.id)
+      .in("comment_id", commentIds);
+
+    if (urError) console.error("Error fetching user reactions:", urError);
+    userReactions = urData ?? [];
+  }
+
+  // Merge counts + userReaction into each comment
+  return baseComments.map((c) => {
+    const counts = countsMap[c.id] || {};
+    const userReaction = userReactions.find((ur) => ur.comment_id === c.id);
+
+    return {
+      ...c,
+      reactionCounts: counts,
+      userReaction: userReaction?.reaction_type ?? null,
+    };
+  });
+};
+
+
   // Fetch all comments from the view
   const fetchComments = async () => {
     try {
@@ -33,7 +88,9 @@ export function CommentsProvider({ children }) {
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setComments(data);
+
+      const merged = await mergeReactions(data);
+      setComments(merged);
       scrollToBottom();
     } catch (err) {
       console.error("Error fetching comments:", err);
@@ -63,11 +120,26 @@ export function CommentsProvider({ children }) {
 
       if (fetchError) throw fetchError;
 
-      setComments((prev) => [...prev, data]);
+      // Always start with empty reactions if none
+      const merged = await mergeReactions([data]);
+      const withDefaults = {
+        ...merged[0],
+        reactionCounts: merged[0]?.reactionCounts ?? {},
+        userReaction: merged[0]?.userReaction ?? null,
+      };
+
+      setComments((prev) => [...prev, withDefaults]);
       scrollToBottom();
     } catch (err) {
       console.error("Error adding comment:", err);
     }
+  };
+
+  // Update a single comment in state (for optimistic updates)
+  const updateComment = (commentId, updateFn) => {
+    setComments((prev) =>
+      prev.map((c) => (c.id === commentId ? updateFn(c) : c))
+    );
   };
 
   useEffect(() => {
@@ -87,7 +159,16 @@ export function CommentsProvider({ children }) {
               .eq("id", payload.new.id)
               .single();
             if (error) throw error;
-            setComments((prev) => [...prev, data]);
+
+            // Merge reactions with defaults
+            const merged = await mergeReactions([data]);
+            const withDefaults = {
+              ...merged[0],
+              reactionCounts: merged[0]?.reactionCounts ?? {},
+              userReaction: merged[0]?.userReaction ?? null,
+            };
+
+            setComments((prev) => [...prev, withDefaults]);
             scrollToBottom();
           } catch (err) {
             console.error("Error fetching new comment:", err);
@@ -103,7 +184,14 @@ export function CommentsProvider({ children }) {
 
   return (
     <CommentsContext.Provider
-      value={{ comments, addComment, loading, commentsEndRef }}
+      value={{
+        comments,
+        addComment,
+        loading,
+        commentsEndRef,
+        fetchComments,
+        updateComment, // exposed for optimistic updates
+      }}
     >
       {children}
     </CommentsContext.Provider>
