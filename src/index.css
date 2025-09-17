@@ -61,6 +61,15 @@ body {
   display: none;
 }
 
+.nav-link-small {
+  overflow: visible; /* not hidden */
+}
+
+nav {
+  padding-bottom: 0; /* or adjust to remove extra space */
+}
+
+
 /* Add this to your global CSS or a <style> tag if using inline CSS */
 @media (max-width: 870px) {
   .nav-link-small {

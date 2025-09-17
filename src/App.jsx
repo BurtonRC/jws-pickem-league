@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
+import { manualWeekNumber } from "./pages/WeeklyPicksPage";
+import { CommentsProvider } from "./context/CommentsContext";
 
 import MainLayout from './components/MainLayout';
 import HomePage from './pages/HomePage';
@@ -11,11 +13,11 @@ import SurvivorPage from './pages/SurvivorPage';
 import WednesdayReportsPage from './pages/WednesdayReportsPage';
 import PaymentsPage from './pages/PaymentsPage';
 import CommentsPage from "./pages/CommentsPage";
+import PicksBoard from "./pages/PicksBoard";
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import UpdatePassword from './pages/UpdatePassword';
-import { CommentsProvider } from "./context/CommentsContext";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -132,6 +134,21 @@ export default function App() {
             )
           }
         />
+        <Route
+          path="/picks-board"
+          element={
+            user ? (
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
+                <PicksBoard weekNumber={manualWeekNumber} />
+              </MainLayout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+
+
 
         {/* Comments Page */}
         <Route

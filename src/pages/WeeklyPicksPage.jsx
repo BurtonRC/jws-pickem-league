@@ -24,10 +24,11 @@ function ConfirmationModal({ isOpen, message, onClose }) {
   );
 }
 
-export default function WeeklyPicksPage() {
-  // Upload New Week from ESPN
-  const manualWeekNumber = 2; // <-- manually set the week you want
+// Upload New Week from ESPN
+export const manualWeekNumber = 2; // <-- manually set the week you want
 
+export default function WeeklyPicksPage() {
+  
   // Core selection state (unchanged)
   const [selectedTeams, setSelectedTeams] = useState({});
   const [sliderOn, setSliderOn] = useState({});
