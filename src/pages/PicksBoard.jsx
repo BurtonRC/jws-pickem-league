@@ -156,7 +156,9 @@ export default function PicksBoard({ weekNumber }) {
           </div>
         </div>
 
-        {visiblePicks.map((pick) => {
+        {visiblePicks
+          .sort((a, b) => a.username.localeCompare(b.username))
+          .map((pick) => {
           const isOpen = allOpen || openCard === pick.id;
           return (
             <div
