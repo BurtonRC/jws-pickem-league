@@ -142,11 +142,11 @@ export default function PicksBoard({ weekNumber }) {
           className="w-full p-2 md:w-[90%] md:p-6 max-w-5xl mx-auto"
         >
           <h1 className="text-2xl font-bold mb-2 md:mb-4 text-center md:text-left">
-            Week {weekNumber} Picks
+            Wk {weekNumber} User's Picks
           </h1>
 
           {/* button stacks under the header; left on mobile, centered on tablet+ */}
-          <div className="flex justify-start md:justify-center">
+          <div className="flex justify-center md:justify-center">
             <button
               onClick={toggleAllCards}
               className="bg-blue-500 text-white px-4 py-2 rounded mt-2"
