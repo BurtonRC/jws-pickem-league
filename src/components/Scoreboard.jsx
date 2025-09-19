@@ -7,6 +7,53 @@ export default function Scoreboard({ collapsed }) {
   const [currentWeek, setCurrentWeek] = useState(null);
   const scrollRef = useRef(null);
 
+  // --- Fallback logo ---
+  const FALLBACK_LOGO = "/logos/fallback.png";
+
+  // --- Mapping from team abbreviation to your local logo file name ---
+  const teamLogoMap = {
+    ari: "cardinals",
+    atl: "falcons",
+    bal: "ravens",
+    buf: "bills",
+    car: "panthers",
+    chi: "bears",
+    cin: "bengals",
+    cle: "browns",
+    dal: "cowboys",
+    den: "broncos",
+    det: "lions",
+    gb: "packers",
+    hou: "texans",
+    ind: "colts",
+    jax: "jaguars",
+    kc: "chiefs",
+    lar: "rams",
+    lac: "chargers",
+    lv: "raiders",
+    mia: "dolphins",
+    min: "vikings",
+    ne: "patriots",
+    no: "saints",
+    nyg: "giants",
+    nyj: "jets",
+    phi: "eagles",
+    pit: "steelers",
+    sf: "49ers",
+    sea: "seahawks",
+    tb: "buccaneers",
+    ten: "titans",
+    wsh: "commanders",
+  };
+
+  // --- Helper to get local logo ---
+  const getTeamLogo = (abbreviation) => {
+    if (!abbreviation) return FALLBACK_LOGO;
+    const fileName = teamLogoMap[abbreviation.toLowerCase()];
+    if (!fileName) return FALLBACK_LOGO;
+    return `/logos/${fileName}.png`;
+  };
+
   // --- Week mapping ---
   const weekMap = {
     pre1: { seasontype: 1, week: 1, label: "Pre Week 1" },
@@ -26,50 +73,49 @@ export default function Scoreboard({ collapsed }) {
   };
 
   // --- Fetch scores for selected week ---
-useEffect(() => {
-  const fetchScores = async () => {
-    try {
-      let baseUrl = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
-      let url = baseUrl;
+  useEffect(() => {
+    const fetchScores = async () => {
+      try {
+        let baseUrl = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+        let url = baseUrl;
 
-      // If user manually selected a week, use it
-      if (week !== "current") {
-        const { seasontype, week: wk } = weekMap[week];
-        url = `${baseUrl}?seasontype=${seasontype}&week=${wk}`;
-      }
-
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error("Score API error");
-      const json = await resp.json();
-
-      setScores(json.events || []);
-
-      // Automatically track the current week from ESPN API
-      const espnCurrentWeek = json.season?.week || 1;
-      setCurrentWeek(espnCurrentWeek);
-
-      // If the user is viewing "current", auto-advance week if all games finished
-      if (week === "current") {
-        const allGamesFinished = (json.events || []).every(
-          (g) => g.status?.type?.completed === true
-        );
-
-        if (allGamesFinished && espnCurrentWeek < 18) {
-          // Move to the next week automatically
-          const nextWeekKey = `reg${espnCurrentWeek + 1}`;
-          setWeek(nextWeekKey);
+        // If user manually selected a week, use it
+        if (week !== "current") {
+          const { seasontype, week: wk } = weekMap[week];
+          url = `${baseUrl}?seasontype=${seasontype}&week=${wk}`;
         }
+
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error("Score API error");
+        const json = await resp.json();
+
+        setScores(json.events || []);
+
+        // Automatically track the current week from ESPN API
+        const espnCurrentWeek = json.season?.week || 1;
+        setCurrentWeek(espnCurrentWeek);
+
+        // If the user is viewing "current", auto-advance week if all games finished
+        if (week === "current") {
+          const allGamesFinished = (json.events || []).every(
+            (g) => g.status?.type?.completed === true
+          );
+
+          if (allGamesFinished && espnCurrentWeek < 18) {
+            // Move to the next week automatically
+            const nextWeekKey = `reg${espnCurrentWeek + 1}`;
+            setWeek(nextWeekKey);
+          }
+        }
+      } catch {
+        setError("Unable to load scores. Try again later.");
       }
-    } catch {
-      setError("Unable to load scores. Try again later.");
-    }
-  };
+    };
 
-  fetchScores();
-  const interval = setInterval(fetchScores, 60000); // refresh every minute
-  return () => clearInterval(interval);
-}, [week]);
-
+    fetchScores();
+    const interval = setInterval(fetchScores, 60000); // refresh every minute
+    return () => clearInterval(interval);
+  }, [week]);
 
   if (error) return null;
 
@@ -97,9 +143,7 @@ useEffect(() => {
 
   return (
     <div
-      className={`transition-all duration-300 overflow-hidden ${
-        collapsed ? "h-0" : "h-auto"
-      }`}
+      className={`transition-all duration-300 overflow-hidden ${collapsed ? "h-0" : "h-auto"}`}
       style={{ backgroundColor: "#f1f2f3" }}
     >
       <div
@@ -113,7 +157,7 @@ useEffect(() => {
             onChange={(e) => setWeek(e.target.value)}
             className="bg-white text-black rounded border border-gray-300 text-xs px-2 py-1"
             aria-label="Select week"
-            style={{width: "96px"}}
+            style={{ width: "96px" }}
           >
             <option value="current">Current</option>
 
@@ -187,16 +231,31 @@ useEffect(() => {
                   {game.status?.type?.shortDetail}
                 </span>
                 <div className="flex flex-col text-xs w-full">
-                  <div className="flex justify-between pb-0.5">
-                    <span className="font-bold">
-                      {away?.team?.abbreviation}
-                    </span>
+                  <div className="flex justify-between items-center pb-0.5">
+                    <div className="flex items-center space-x-1">
+                      {/* Away team logo */}
+                      <img
+                        src={getTeamLogo(away?.team?.abbreviation)}
+                        alt={away?.team?.abbreviation}
+                        className="w-4 h-4 object-contain"
+                        onError={(e) => { e.currentTarget.src = FALLBACK_LOGO; }}
+                      />
+                      <span className="font-bold">{away?.team?.abbreviation}</span>
+                    </div>
                     {away?.score && <span>{away.score}</span>}
                   </div>
-                  <div className="flex justify-between pt-0.5">
-                    <span className="font-bold">
-                      {home?.team?.abbreviation}
-                    </span>
+
+                  <div className="flex justify-between items-center pt-0.5">
+                    <div className="flex items-center space-x-1">
+                      {/* Home team logo */}
+                      <img
+                        src={getTeamLogo(home?.team?.abbreviation)}
+                        alt={home?.team?.abbreviation}
+                        className="w-4 h-4 object-contain"
+                        onError={(e) => { e.currentTarget.src = FALLBACK_LOGO; }}
+                      />
+                      <span className="font-bold">{home?.team?.abbreviation}</span>
+                    </div>
                     {home?.score && <span>{home.score}</span>}
                   </div>
                 </div>
