@@ -1,11 +1,14 @@
 // scripts/syncGameResults.js
 import 'dotenv/config';
 import fetch from 'node-fetch';     // node v18+ may use global fetch; this is safe
-import pkg from 'pg';
-const { Pool } = pkg;
+import { createClient } from '@supabase/supabase-js';
 import { driveByGames, pointSpreads } from '../src/data/leagueConfig.js';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Initialize Supabase client with service role key
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 async function fetchWeekEvents(week) {
   const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}`;
@@ -32,6 +35,33 @@ function determineCorrectSpread(homeTeam, awayTeam, homeScore, awayScore, gameId
   }
   // If spread not covered, no correct_spread (null)
   return null;
+}
+
+async function upsertGameResult(game) {
+  const { week, gameId, homeTeam, awayTeam, winner, dbTeam, correctSpreadTeam, homeScore, awayScore } = game;
+
+  try {
+    const { error } = await supabase
+      .from('game_results')
+      .upsert({
+        week,
+        game_id: gameId,
+        home_team: homeTeam,
+        away_team: awayTeam,
+        winner,
+        db_team: dbTeam,
+        correct_spread: correctSpreadTeam,
+        home_score: homeScore,
+        away_score: awayScore,
+        created_at: new Date().toISOString()
+      }, { onConflict: ['week', 'game_id'] });
+
+    if (error) throw error;
+
+    console.log(`Updated game ${gameId}: ${homeTeam} vs ${awayTeam}`);
+  } catch (err) {
+    console.error(`Error upserting game ${gameId}:`, err);
+  }
 }
 
 async function syncWeek(week) {
@@ -61,34 +91,23 @@ async function syncWeek(week) {
     // correct_spread: team that covered (or NULL)
     const correctSpreadTeam = determineCorrectSpread(homeTeam, awayTeam, homeScore, awayScore, gameId);
 
-    // Upsert into game_results via SQL using parameterized query
-    const upsertSql = `
-      INSERT INTO game_results (week, game_id, home_team, away_team, winner, db_team, correct_spread, home_score, away_score, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
-      ON CONFLICT (week, game_id)
-      DO UPDATE SET
-        home_team = EXCLUDED.home_team,
-        away_team = EXCLUDED.away_team,
-        winner = EXCLUDED.winner,
-        db_team = EXCLUDED.db_team,
-        correct_spread = EXCLUDED.correct_spread,
-        home_score = EXCLUDED.home_score,
-        away_score = EXCLUDED.away_score,
-        created_at = now();
-    `;
-    const params = [week, gameId, homeTeam, awayTeam, winner, dbTeam, correctSpreadTeam, homeScore, awayScore];
-
-    try {
-      await pool.query(upsertSql, params);
-      console.log(`Updated game ${gameId}: ${homeTeam} vs ${awayTeam}`);
-    } catch (err) {
-      console.error(`Error upserting game ${gameId}:`, err);
-    }
+    await upsertGameResult({
+      week,
+      gameId,
+      homeTeam,
+      awayTeam,
+      winner,
+      dbTeam,
+      correctSpreadTeam,
+      homeScore,
+      awayScore
+    });
   }
 
   // call compute function
   try {
-    const res = await pool.query('SELECT compute_weekly_results($1)', [week]);
+    const { data, error } = await supabase.rpc('compute_weekly_results', { week });
+    if (error) throw error;
     console.log('compute_weekly_results executed for week', week);
   } catch (err) {
     console.error('Error executing compute_weekly_results:', err);
@@ -103,6 +122,6 @@ const weekArg = args[0] ? parseInt(args[0], 10) : null;
     const week = weekArg || 1;
     await syncWeek(week);
   } finally {
-    await pool.end();
+    console.log('Sync completed.');
   }
 })();
