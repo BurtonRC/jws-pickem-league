@@ -1,5 +1,5 @@
 // src/pages/Login.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -10,20 +10,56 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
   const [showReset, setShowReset] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false); // remember me checkbox
   const navigate = useNavigate();
 
   const logoPath = `${import.meta.env.BASE_URL}images/pickem-logo.png`;
+
+  // Load saved identifier if present
+  useEffect(() => {
+    const savedIdentifier = localStorage.getItem("identifier");
+    if (savedIdentifier) {
+      setIdentifier(savedIdentifier);
+      setRememberMe(true);
+    }
+  }, []);
+
+  // Check if a session already exists and redirect to /home if so
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        navigate("/home");
+      }
+    };
+    checkSession();
+  }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(null);
 
     try {
+      // Save or clear identifier depending on rememberMe
+      if (rememberMe) {
+        localStorage.setItem("identifier", identifier);
+      } else {
+        localStorage.removeItem("identifier");
+      }
+
       // Try login with email first
-      let { data, error } = await supabase.auth.signInWithPassword({
-        email: identifier.includes("@") ? identifier : undefined,
-        password,
-      });
+      let { data, error } = await supabase.auth.signInWithPassword(
+        {
+          email: identifier.includes("@") ? identifier : undefined,
+          password,
+        },
+        {
+          // 👇 use session persistence depending on rememberMe
+          auth: { persistSession: rememberMe ? "local" : "session" },
+        }
+      );
 
       // If no email, try username lookup
       if (!data?.user && !identifier.includes("@")) {
@@ -38,10 +74,16 @@ export default function Login() {
           return;
         }
 
-        const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-          email: userByUsername.email,
-          password,
-        });
+        const { data: loginData, error: loginError } =
+          await supabase.auth.signInWithPassword(
+            {
+              email: userByUsername.email,
+              password,
+            },
+            {
+              auth: { persistSession: rememberMe ? "local" : "session" },
+            }
+          );
 
         if (loginError) throw loginError;
         if (loginData?.user) navigate("/home");
@@ -95,6 +137,20 @@ export default function Login() {
               className="w-full p-2 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
 
+            {/* Remember Me */}
+            <div className="flex items-center">
+              <input
+                id="rememberMe"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="mr-2"
+              />
+              <label htmlFor="rememberMe" className="text-sm text-gray-600">
+                Remember Me
+              </label>
+            </div>
+
             <button
               type="submit"
               className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
@@ -102,7 +158,7 @@ export default function Login() {
               Log In
             </button>
 
-           {/* <p className="text-sm text-center mt-2">
+            {/* <p className="text-sm text-center mt-2">
               <button
                 type="button"
                 onClick={() => setShowReset(true)}
@@ -121,7 +177,7 @@ export default function Login() {
           </form>
         ) : (
           // --- Forgot Password Form ---
-        {/*  <form onSubmit={handleResetPassword} className="space-y-4">
+          /*  <form onSubmit={handleResetPassword} className="space-y-4">
             {message && <p className="text-green-500 text-sm text-center">{message}</p>}
             {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
@@ -150,7 +206,8 @@ export default function Login() {
                 Back to Login
               </button>
             </p>
-          </form> */}
+          </form> */
+          <></>
         )}
       </div>
     </div>
