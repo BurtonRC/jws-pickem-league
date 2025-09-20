@@ -117,33 +117,48 @@ export default function CommentsPage({ user }) {
       <h2 className="text-2xl font-bold">Comments</h2>
 
       {/* Comment input */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-        <textarea
-          ref={textareaRef}
-          className="w-full p-2 border rounded resize-none overflow-y-auto transition-[height] duration-200 ease-out"
-          placeholder="Write a comment..."
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          rows={2}
-          style={{ maxHeight: "200px" }}
-        />
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 self-end"
-        >
-          Post
-        </button>
-      </form>
+<form onSubmit={handleSubmit} className="flex flex-col gap-2">
+  <textarea
+    ref={textareaRef}
+    className="w-full p-2 border rounded resize-none overflow-y-auto transition-[height] duration-200 ease-out"
+    placeholder="Write a comment..."
+    value={newComment}
+    onChange={(e) => setNewComment(e.target.value)}
+    rows={2}
+    style={{
+      maxHeight: "200px",
+      whiteSpace: "pre-line",         // added to preserve line breaks
+      overflowWrap: "break-word",     // <<< fix mobile overflow
+      wordBreak: "break-word"         // <<< fix mobile overflow
+    }}
+  />
+  <button
+    type="submit"
+    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 self-end"
+  >
+    Post
+  </button>
+</form>
+
 
       {loading ? (
-        <p>Loading comments...</p>
+  <div className="flex justify-center items-center h-32">
+    <p>Loading comments...</p>
+  </div>
       ) : (
         <div className="space-y-4">
           {comments
             .filter((c) => !c.parent_comment_id)
             .map((c) => (
               <div key={c.id} className="p-4 bg-gray-100 rounded-xl">
-                <p className="text-sm text-gray-600">
+                {/* Preserve formatting with white-space: pre-line */}
+                <p 
+                  className="text-sm text-gray-600" 
+                  style={{ 
+                    whiteSpace: "pre-line",
+                    overflowWrap: "anywhere",
+                    wordBreak: "normal" // <-- changed from break-word to break-all 
+                  }}>
                   <span className="font-semibold">{c.username ?? "Unknown"}:</span>{" "}
                   {c.content}
                 </p>
@@ -172,36 +187,48 @@ export default function CommentsPage({ user }) {
                 </button>
 
                 {/* Reply form */}
-                {replyingCommentId === c.id && (
-                  <form
-                    onSubmit={(e) => handleReplySubmit(e, c.id)}
-                    className="mt-1 flex flex-col gap-1 ml-4"
-                  >
-                    <textarea
-                      ref={replyTextareaRef}
-                      className="w-full p-1 border rounded resize-none text-sm"
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      rows={1}
-                      placeholder="Write a reply..."
-                      style={{ maxHeight: "150px" }}
-                    />
-                    <button
-                      type="submit"
-                      className="self-end text-xs text-white bg-blue-600 px-2 py-1 rounded hover:bg-blue-700"
-                    >
-                      Post
-                    </button>
-                  </form>
-                )}
+{replyingCommentId === c.id && (
+  <form
+    onSubmit={(e) => handleReplySubmit(e, c.id)}
+    className="mt-1 flex flex-col gap-1 ml-4"
+  >
+    <textarea
+      ref={replyTextareaRef}
+      className="w-full p-1 border rounded resize-none text-sm"
+      value={replyText}
+      onChange={(e) => setReplyText(e.target.value)}
+      rows={1}
+      placeholder="Write a reply..."
+      style={{
+        maxHeight: "150px",
+        whiteSpace: "pre-line",         // preserve formatting
+        overflowWrap: "break-word",     // <<< fix mobile overflow
+        wordBreak: "break-word"         // <<< fix mobile overflow
+      }}
+    />
+    <button
+      type="submit"
+      className="self-end text-xs text-white bg-blue-600 px-2 py-1 rounded hover:bg-blue-700"
+    >
+      Post
+    </button>
+  </form>
+)}
+
 
                 {/* Render replies */}
                 {c.replies?.map((r) => (
                   <div
                     key={r.id}
-                    className="ml-4 mt-1 p-2 bg-gray-50 rounded-lg border-l-2 border-gray-300"
+                    className="ml-2 sm:ml-4 mt-1 p-2 bg-gray-50 rounded-lg border-l-2 border-gray-300"
                   >
-                    <p className="text-sm text-gray-600">
+                    <p 
+                    className="text-sm text-gray-600" 
+                    style={{ 
+                      whiteSpace: "pre-line",
+                      overflowWrap: "anywhere",
+                      wordBreak: "normal" // <-- changed from break-word to break-all 
+                      }}>
                       <span className="font-semibold">{r.username ?? "Unknown"}:</span>{" "}
                       {r.content}
                     </p>

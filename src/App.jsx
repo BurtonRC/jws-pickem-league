@@ -18,6 +18,7 @@ import SignUp from './pages/SignUp';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import UpdatePassword from './pages/UpdatePassword';
+import ScrollToTop from "./components/ScrollToTop";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -47,7 +48,9 @@ export default function App() {
   };
 
   return (
-    <CommentsProvider>
+   <>
+     <ScrollToTop />
+    <CommentsProvider> 
       <Routes>
         {/* Root redirect */}
         <Route
@@ -62,17 +65,17 @@ export default function App() {
 
         {/* Pages with MainLayout (Scoreboard + Navbar + Page Content) */}
         <Route
-  path="/home"
-  element={
-    user ? (
-      <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
-        <HomePage user={user} />  {/* Pass user here */}
-      </MainLayout>
-    ) : (
-      <Navigate to="/login" replace />
-    )
-  }
-/>
+          path="/home"
+          element={
+            user ? (
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
+                <HomePage user={user} />  {/* Pass user here */}
+              </MainLayout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
 
         <Route
           path="/picks"
@@ -174,5 +177,6 @@ export default function App() {
         />
       </Routes>
     </CommentsProvider>
+    </>
   );
 }
