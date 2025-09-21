@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import WarningModal from "../components/WarningModal";
 import * as leagueConfig from "../data/leagueConfig";
-
+import PageHeader from "@/components/PageHeader";
 
 /** Local confirmation modal (keeps your WarningModal for warnings only) */
 function ConfirmationModal({ isOpen, message, onClose }) {
@@ -669,11 +669,11 @@ if (!games || !games.length) {
 
   // ---- UI ----
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="w-full md:w-[90%] max-w-5xl mx-auto p-6 space-y-4">
-        <h1 className="text-2xl font-bold mb-4">
-          Weekly Picks - Week {currentWeek.weekNumber}
-        </h1>
+    <div className="min-h-screen bg-gray-50 px-6 pt-6">
+      <div className="w-full max-w-5xl mx-auto space-y-4">
+        <PageHeader>
+          Weekly Picks Wk {currentWeek.weekNumber}
+        </PageHeader>
 
         {/* ===== DESKTOP TABLE ===== */}
         <table className="hidden md:table w-full border-collapse">
