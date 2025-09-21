@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../supabaseClient";
+import PageHeader from "@/components/PageHeader";
 
 /**
  * Fetch games from ESPN for a given week and map to simple matchup objects.
@@ -26,22 +27,47 @@ async function fetchGamesForWeek(weekNumber) {
   });
 }
 
-export default function PicksBoard({ weekNumber }) {
+/**
+ * Fetch the *current* NFL week directly from ESPN API.
+ */
+async function fetchCurrentWeek() {
+  const year = new Date().getFullYear();
+  const res = await fetch(
+    `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?year=${year}&seasontype=2`
+  );
+  const data = await res.json();
+  return data.week?.number ?? 1; // fallback to 1 if missing
+}
+
+export default function PicksBoard() {
   const [picks, setPicks] = useState([]);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [openCard, setOpenCard] = useState(null);
+  const [openCards, setOpenCards] = useState({}); // track open state for each card individually
   const [allOpen, setAllOpen] = useState(false); // track expand/collapse state
+  const [currentWeek, setCurrentWeek] = useState(null); // track the actual current week
+  const [selectedWeek, setSelectedWeek] = useState(null); // track user’s dropdown selection
   const cardRefs = useRef({});
 
+  // fetch the true current week
   useEffect(() => {
+    const init = async () => {
+      const week = await fetchCurrentWeek();
+      setCurrentWeek(week);
+      setSelectedWeek(week); // default to current week on load
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedWeek) return; // wait until week known
     const load = async () => {
       setLoading(true);
 
       const { data: picksData, error } = await supabase
         .from("weekly_picks")
         .select("id, username, picks, survivor_pick, week")
-        .eq("week", weekNumber);
+        .eq("week", selectedWeek);
 
       if (error) {
         console.error("Error fetching picks:", error);
@@ -49,7 +75,7 @@ export default function PicksBoard({ weekNumber }) {
         return;
       }
 
-      const gamesData = await fetchGamesForWeek(weekNumber);
+      const gamesData = await fetchGamesForWeek(selectedWeek);
 
       setPicks(picksData || []);
       setGames(gamesData);
@@ -57,15 +83,15 @@ export default function PicksBoard({ weekNumber }) {
     };
 
     load();
-  }, [weekNumber]);
+  }, [selectedWeek]);
 
-  if (loading) {
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <p className="text-lg font-medium text-gray-700">Loading user's picks...</p>
-    </div>
-  );
-}
+  if (loading || !currentWeek || !selectedWeek) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg font-medium text-gray-700">Loading user's picks...</p>
+      </div>
+    );
+  }
 
   const now = new Date();
 
@@ -110,114 +136,138 @@ export default function PicksBoard({ weekNumber }) {
     };
   });
 
+   // Toggle a single card open/closed
   const toggleCard = (id) => {
-    const newOpen = openCard === id ? null : id;
-    setOpenCard(newOpen);
-
-    // Smooth scroll into view if opening
-    if (newOpen && cardRefs.current[id]) {
-      setTimeout(() => {
-        cardRefs.current[id].scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100); // delay to allow maxHeight animation
-    }
+    setOpenCards((prev) => ({
+      ...prev,
+      [id]: !prev[id], // toggle this card
+    }));
   };
 
+  // Toggle all cards open/closed
   const toggleAllCards = () => {
     const newAllOpen = !allOpen;
     setAllOpen(newAllOpen);
-    setOpenCard(newAllOpen ? "all" : null);
+
+    setAllOpen(newAllOpen);
 
     if (newAllOpen) {
-      // Scroll to top container when expanding all
-      document.getElementById("picksboard-header")?.scrollIntoView({ behavior: "smooth" });
+      // Open all cards individually
+      const allOpenState = {};
+      picks.forEach((pick) => {
+        allOpenState[pick.id] = true;
+      });
+      setOpenCards(allOpenState);
+    } else {
+      // Close all cards
+      setOpenCards({});
     }
+
+    // No scroll needed when expanding/collapsing all
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="w-full md:w-[90%] max-w-5xl mx-auto p-6 space-y-4">
-        {/* Header + Expand/Collapse Button */}
-        <div
-          id="picksboard-header"
-          className="w-full p-2 md:w-[90%] md:p-6 max-w-5xl mx-auto"
-        >
-          <h1 className="text-2xl font-bold mb-2 md:mb-4 text-center md:text-left">
-            Wk {weekNumber} User's Picks
-          </h1>
+    <div className="min-h-screen bg-gray-50 px-6 pt-6">
+      <div className="w-full md:w-[90%] max-w-5xl mx-auto space-y-4">
+        {/* Header + Expand/Collapse Button + Week Dropdown */}
+        <div id="picksboard-header">
+          <PageHeader>
+            User's Picks
+          </PageHeader>
 
-          {/* button stacks under the header; left on mobile, centered on tablet+ */}
-          <div className="flex justify-center md:justify-center">
-            <button
-              onClick={toggleAllCards}
-              className="bg-blue-500 text-white px-4 py-2 rounded mt-2"
+          {/* dropdown + button container (side by side even on mobile) */}
+          <div className="flex flex-row items-center justify-center md:justify-center gap-4">
+            {/* Week selector dropdown */}
+            <select
+              value={selectedWeek}
+              onChange={(e) => setSelectedWeek(Number(e.target.value))}
+              className="border px-3 py-2 rounded"
             >
-              {allOpen ? "Collapse All" : "Expand All"}
-            </button>
+              {Array.from({ length: currentWeek }, (_, i) => i + 1).map((w) => (
+                <option key={w} value={w}>
+                  Week {w}
+                </option>
+              ))}
+            </select>
+
+            {/* Expand/Collapse button with fixed width wrapper */}
+<div className="inline-block" style={{ width: "9rem" }}> 
+  {/* 9rem chosen to fit "Collapse All" comfortably; adjust if needed */}
+  <button
+    onClick={toggleAllCards}
+    className="bg-blue-500 text-white px-4 py-2 rounded w-full text-center"
+  >
+    {allOpen ? "Collapse All" : "Expand All"}
+  </button>
+</div>
+
           </div>
         </div>
 
+        {/* Picks mapping */}
         {visiblePicks
           .sort((a, b) => a.username.localeCompare(b.username))
           .map((pick) => {
-          const isOpen = allOpen || openCard === pick.id;
-          return (
-            <div
-              key={pick.id}
-              className="bg-white shadow-md rounded-2xl overflow-hidden mx-auto w-full max-w-md"
-            >
-              {/* Accordion header */}
-              <button
-                className="w-full px-4 py-3 text-left font-bold bg-gray-100 hover:bg-gray-200 flex justify-between items-center"
-                onClick={() => toggleCard(pick.id)}
-              >
-                {pick.username}
-                <svg
-                  className={`w-5 h-5 ml-2 transition-transform duration-300 ${
-                    isOpen ? "rotate-180" : "rotate-0"
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-
-              {/* Accordion content */}
+            const isOpen = !!openCards[pick.id]; // per-card open state
+            return (
               <div
-                ref={(el) => (cardRefs.current[pick.id] = el)}
-                className="transition-all duration-300 overflow-hidden"
-                style={{
-                  maxHeight: isOpen
-                    ? `${cardRefs.current[pick.id]?.scrollHeight}px`
-                    : "0px",
-                }}
+                key={pick.id}
+                className="bg-white shadow-md rounded-2xl overflow-hidden mx-auto w-full max-w-md"
               >
-                <div className="p-4 divide-y">
-                  {games.map((game) => (
-                    <div key={game.id} className="flex justify-between items-center py-2">
-                      <span className="text-sm">{game.matchup}</span>
-                      <span className="font-semibold">{pick.picks[game.id] ?? "-"}</span>
-                    </div>
-                  ))}
+                {/* Accordion header */}
+                <button
+                  className="w-full px-4 py-3 text-left font-bold bg-gray-100 hover:bg-gray-200 flex justify-between items-center"
+                  onClick={() => toggleCard(pick.id)}
+                >
+                  {pick.username}
+                  <svg
+                    className={`w-5 h-5 ml-2 transition-transform duration-300 ${
+                      isOpen ? "rotate-180" : "rotate-0"
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
 
-                  {/* Survivor pick */}
-                  <div className="flex justify-between items-center py-2 font-medium">
-                    <span className="italic">Survivor</span>
-                    <span>{pick.survivor_pick || "-"}</span>
+                {/* Accordion content */}
+                <div
+                  ref={(el) => (cardRefs.current[pick.id] = el)}
+                  className="transition-all duration-300 overflow-hidden"
+                  style={{
+                    maxHeight: isOpen
+                      ? `${cardRefs.current[pick.id]?.scrollHeight}px`
+                      : "0px",
+                  }}
+                >
+                  <div className="p-4 divide-y">
+                    {games.map((game) => (
+                      <div key={game.id} className="flex justify-between items-center py-2">
+                        <span className="text-sm">{game.matchup}</span>
+                        <span className="font-semibold">{pick.picks[game.id] ?? "-"}</span>
+                      </div>
+                    ))}
+
+                    {/* Survivor pick */}
+                    <div className="flex justify-between items-center py-2 font-medium">
+                      <span className="italic">Survivor</span>
+                      <span>{pick.survivor_pick || "-"}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </div>
+
   );
 }

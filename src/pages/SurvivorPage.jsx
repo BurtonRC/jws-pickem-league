@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import PageHeader from "@/components/PageHeader";
 
 export default function SurvivorPage() {
   const [survivorData, setSurvivorData] = useState({});
@@ -60,9 +61,9 @@ export default function SurvivorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="w-full md:w-[90%] max-w-5xl mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-4">Survivor Picks</h1>
+    <div className="min-h-screen bg-gray-50 px-6 pt-6">
+      <div className="w-full max-w-5xl mx-auto space-y-4">
+        <PageHeader>Survivor Picks</PageHeader>
 
         <table className="w-full border-collapse">
           <thead>

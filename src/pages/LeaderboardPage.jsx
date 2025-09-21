@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import PageHeader from "@/components/PageHeader";
 
 export default function LeaderboardPage() {
   const [users, setUsers] = useState([]);
@@ -44,11 +45,11 @@ export default function LeaderboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 px-1 sm:px-6 md:px-8">
-      <div className="w-full max-w-5xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-center md:text-left">
+    <div className="min-h-screen bg-gray-50 px-6 pt-6">
+      <div className="w-full max-w-5xl mx-auto space-y-4">
+        <PageHeader>
           Leaderboard
-        </h1>
+        </PageHeader>
 
         <table className="w-full table-fixed border-collapse text-sm sm:text-base">
           <thead>
