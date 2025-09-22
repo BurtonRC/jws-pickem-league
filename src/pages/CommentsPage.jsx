@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useComments } from "../context/CommentsContext";
 import { toggleReaction } from "../lib/reactions"; // <-- ensure this file exists
+import CommentText from "../components/CommentText";
 
 export default function CommentsPage({ user }) {
   const { comments, addComment, loading, commentsEndRef, updateComment } = useComments();
@@ -147,34 +148,27 @@ export default function CommentsPage({ user }) {
   </div>
       ) : (
         <div className="space-y-4">
-          {comments
-            .filter((c) => !c.parent_comment_id)
-            .map((c) => (
-              <div key={c.id} className="p-4 bg-gray-100 rounded-xl">
-                {/* Preserve formatting with white-space: pre-line */}
-                <p 
-                  className="text-sm text-gray-600" 
-                  style={{ 
-                    whiteSpace: "pre-line",
-                    overflowWrap: "anywhere",
-                    wordBreak: "normal" // <-- changed from break-word to break-all 
-                  }}>
-                  <span className="font-semibold">{c.username ?? "Unknown"}:</span>{" "}
-                  {c.content}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {parseTimestamp(c.created_at).toLocaleString([], {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
-                  })}
-                </p>
+          {/* Render main comments (top-level only) */}
+{comments
+  .filter((c) => !c.parent_comment_id)
+  .map((c) => (
+    <div key={c.id} className="p-4 bg-gray-100 rounded-xl">
+      {/* Preserve formatting with white-space: pre-line */}
+      <CommentText username={c.username} content={c.content} />
 
-                {/* Reactions */}
-                <ReactionButtons comment={c} user={user} onReact={handleReact} />
+      <p className="text-xs text-gray-400">
+        {parseTimestamp(c.created_at).toLocaleString([], {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        })}
+      </p>
+
+      {/* Reactions */}
+      <ReactionButtons comment={c} user={user} onReact={handleReact} />
 
                 {/* Reply button */}
                 <button
@@ -217,33 +211,27 @@ export default function CommentsPage({ user }) {
 
 
                 {/* Render replies */}
-                {c.replies?.map((r) => (
-                  <div
-                    key={r.id}
-                    className="ml-2 sm:ml-4 mt-1 p-2 bg-gray-50 rounded-lg border-l-2 border-gray-300"
-                  >
-                    <p 
-                    className="text-sm text-gray-600" 
-                    style={{ 
-                      whiteSpace: "pre-line",
-                      overflowWrap: "anywhere",
-                      wordBreak: "normal" // <-- changed from break-word to break-all 
-                      }}>
-                      <span className="font-semibold">{r.username ?? "Unknown"}:</span>{" "}
-                      {r.content}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {parseTimestamp(r.created_at).toLocaleString([], {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      })}
-                    </p>
-                    <ReactionButtons comment={r} user={user} onReact={handleReact} />
-                  </div>
+      {c.replies?.map((r) => (
+        <div
+          key={r.id}
+          className="ml-2 sm:ml-4 mt-1 p-2 bg-gray-50 rounded-lg border-l-2 border-gray-300"
+        >
+          {/* Preserve formatting with white-space: pre-line */}
+          <CommentText username={r.username} content={r.content} />
+
+          <p className="text-xs text-gray-400">
+            {parseTimestamp(r.created_at).toLocaleString([], {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            })}
+          </p>
+
+          <ReactionButtons comment={r} user={user} onReact={handleReact} />
+        </div>
                 ))}
               </div>
             ))}

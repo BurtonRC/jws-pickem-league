@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { Link } from "react-router-dom";
 import { useComments } from "../context/CommentsContext";
+import CommentText from "../components/CommentText";
 
 export default function HomePage({ user }) {
   const [report, setReport] = useState(null);
@@ -61,10 +62,8 @@ export default function HomePage({ user }) {
           <h3 className="text-xl font-semibold">Recent Comments</h3>
           {previewComments.map((c) => (
             <div key={c.id} className="border-b border-gray-300 pb-2">
-              <p className="text-sm text-gray-600">
-                <span className="font-semibold">{c.username ?? "Unknown"}:</span>{" "}
-                {c.content}
-              </p>
+              <CommentText username={c.username} content={c.content} />
+
               <p className="text-xs text-gray-400">
                 {parseTimestamp(c.created_at).toLocaleString([], {
                   year: "numeric",
