@@ -14,6 +14,6 @@ export const driveByGames = {
 };
 
 export const pointSpreads = {
-  "401772922": [-8.5]  // This will generate:
+  "401772922": [8.5]  // This will generate:
   // "Green Bay -2.5" and "Detroit +2.5" in your dropdown automatically
 };
