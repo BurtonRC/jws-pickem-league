@@ -25,7 +25,7 @@ function ConfirmationModal({ isOpen, message, onClose }) {
 }
 
 // Upload New Week from ESPN
-export const manualWeekNumber = 4; // <-- manually set the week you want
+export const manualWeekNumber = 5; // <-- manually set the week you want
 
 export default function WeeklyPicksPage() {
   
@@ -63,17 +63,71 @@ export default function WeeklyPicksPage() {
   const [games, setGames] = useState([]);
   const [allTeams, setAllTeams] = useState([]);
 
-  // Track Drive-By (DB) picks separately
-  const [DBs, setDBs] = useState({});
+  // Hardcode international games you want in the first submit group
+  const earlySundayGames = [
+    "Minnesota Vikings at Cleveland Browns",  // adjust string to match ESPN game.name format
+    // add others in future weeks here
+  ];
+
+  /* Track Drive-By (DB) picks separately
+  const [DBs, setDBs] = useState({});*/
+
+  // Helper: Compute DBs from current selections
+  const computeDBs = () => {
+  const dbs = {};
+    games.forEach((g) => {
+      if (selectedTeams[g.id] === g.dbTeam) {
+        dbs[g.id] = g.dbTeam;
+      }
+    });
+    return dbs;
+  };
+
 
   // Helper: determine if a game is in the first submit group (Thu-Fri-Sat)
-  const isFirstSubmitGame = (game) => ["Thu", "Fri", "Sat"].includes(game.day);
+  const isFirstSubmitGame = (game) => {
+  // 1. Always Thu / Fri / Sat
+  if (["Thu", "Fri", "Sat"].includes(game.day)) {
+    return true;
+  }
+
+  // 2. Explicit override (London/Germany games, etc.)
+  const matchup = `${game.teams[0]} at ${game.teams[1]}`;
+  if (earlySundayGames.includes(matchup)) {
+    return true;
+  }
+
+  // 3. Safety net: catch Sunday games that start before 12 ET (9:30 AM intl games)
+  if (game.day === "Sun" && game.date) {
+    const kickoff = new Date(game.date); // ESPN feed gives ISO timestamp
+    const hoursET = kickoff.getUTCHours() - 4; // UTC→ET (no DST adjust)
+    if (hoursET < 12) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+  // Helper to return the display label for the Day column
+  const getDayLabel = (game) => {
+    const matchup = `${game.teams[0]} at ${game.teams[1]}`;
+
+    // Only for early international Sunday games
+    if (game.day === "Sun" && earlySundayGames.includes(matchup)) {
+      return "Intl Sun (08:30 CST)";
+    }
+
+    // Default label
+    return game.day;
+  };
+
 
   // Helper: check if a game's kickoff has already passed
-const hasGameStarted = (game) => {
-  if (!game.date) return false; // fallback if no date
-  return new Date(game.date) < new Date(); // true if in the past
-};
+  const hasGameStarted = (game) => {
+    if (!game.date) return false; // fallback if no date
+    return new Date(game.date) < new Date(); // true if in the past
+  };
 
 // Map of previously picked teams (won) for the survivor dropdown
 const previousPickMap = useMemo(() => {
@@ -317,7 +371,7 @@ console.log("First locked?", firstLocked);
 console.log("Second locked?", secondLocked);
 
 
-  // Handlers
+  // Handlers Update toggleSlider
   const toggleSlider = (id, checked, dbTeam) => {
   // Update slider toggle UI
   setSliderOn((prev) => ({ ...prev, [id]: checked }));
@@ -328,16 +382,16 @@ console.log("Second locked?", secondLocked);
     [id]: checked ? dbTeam : "",
   }));
 
-  // Update DBs state: add if checked, remove if unchecked
+  /* Update DBs state: add if checked, remove if unchecked
   setDBs((prev) => {
     const newDBs = { ...prev };
     if (checked) newDBs[id] = dbTeam;
     else delete newDBs[id];
     return newDBs;
-  });
+  });*/
 
   console.log("ToggleSlider called:", { id, checked, dbTeam });
-  console.log("Current DBs state:", { ...DBs, [id]: checked ? dbTeam : null });
+  // console.log("Current DBs state:", { ...DBs, [id]: checked ? dbTeam : null });
 };
 
 
@@ -411,22 +465,22 @@ const validateSecond = () => {
 
 
       // Fetch existing picks + survivor pick so the page state reflects previously submitted picks
-const loadExistingPicks = async () => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    if (!currentWeek?.weekNumber) return;
-    const weekNum = currentWeek.weekNumber;
+      const loadExistingPicks = async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+          if (!currentWeek?.weekNumber) return;
+          const weekNum = currentWeek.weekNumber;
 
-    // Fetch weekly picks
-    const { data: existingData, error: fetchError } = await supabase
-      .from("weekly_picks")
-      .select("picks, point_spreads, dbs")
-      .eq("user_id", user.id)
-      .eq("week", weekNum)
-      .maybeSingle(); // <-- safe if row missing
+          // Fetch weekly picks
+          const { data: existingData, error: fetchError } = await supabase
+            .from("weekly_picks")
+            .select("picks, point_spreads, dbs")
+            .eq("user_id", user.id)
+            .eq("week", weekNum)
+            .maybeSingle(); // <-- safe if row missing
 
-    if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
+          if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
     setSelectedTeams(existingData?.picks || {});
     setPointSpreadSelection(existingData?.point_spreads || {});
@@ -474,70 +528,69 @@ const loadExistingPicks = async () => {
 
 
     // ---- Save picks to Supabase (merge first and second submit) ----
-    const saveToSupabase = async () => {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError) throw userError;
-        if (!user) throw new Error("No logged-in user");
-        if (!currentWeek?.weekNumber) throw new Error("Week number not determined.");
-        const weekNum = currentWeek.weekNumber;
+const saveToSupabase = async () => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!user) throw new Error("No logged-in user");
+    if (!currentWeek?.weekNumber) throw new Error("Week number not determined.");
+    const weekNum = currentWeek.weekNumber;
 
-        // Fetch existing picks to merge
-        const { data: existingData, error: fetchError } = await supabase
-          .from("weekly_picks")
-          .select("picks, point_spreads, dbs, survivor_pick")
-          .eq("user_id", user.id)
-          .eq("week", weekNum)
-          .single();
+    // Fetch existing picks to merge
+    const { data: existingData, error: fetchError } = await supabase
+      .from("weekly_picks")
+      .select("picks, point_spreads, dbs, survivor_pick")
+      .eq("user_id", user.id)
+      .eq("week", weekNum)
+      .single();
 
-        if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
+    if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
-        // Merge picks, point spreads, DBs, survivor
-        // Merge everything before upsert
-        const mergedPicks = { ...(existingData?.picks || {}), ...selectedTeams };
-        const mergedPointSpreads = { ...(existingData?.point_spreads || {}), ...pointSpreadSelection };
-        const mergedDBs = { ...(existingData?.dbs || {}), ...DBs };
-        const mergedSurvivor = survivorPick || existingData?.survivor_pick || null; // <-- must come before upsert
+    // Merge picks, point spreads, DBs, survivor
+    // Merge everything before upsert
+    const mergedPicks = { ...(existingData?.picks || {}), ...selectedTeams };
+    const mergedPointSpreads = { ...(existingData?.point_spreads || {}), ...pointSpreadSelection };
+    const mergedDBs = computeDBs(); // <-- REPLACE entirely with current selections
+    const mergedSurvivor = survivorPick || existingData?.survivor_pick || null; // <-- must come before upsert
 
+    // Upsert into weekly_picks
+    const { data: upsertData, error: upsertError } = await supabase
+      .from("weekly_picks")
+      .upsert(
+        [{
+          user_id: user.id,
+          week: weekNum,
+          picks: mergedPicks,
+          point_spreads: mergedPointSpreads,
+          dbs: mergedDBs,
+          survivor_pick: mergedSurvivor
+        }],
+        { onConflict: ["user_id", "week"] }
+      )
+      .select();
 
-        // Upsert into weekly_picks
-        const { data: upsertData, error: upsertError } = await supabase
-          .from("weekly_picks")
-          .upsert(
-            [{
-              user_id: user.id,
-              week: weekNum,
-              picks: mergedPicks,
-              point_spreads: mergedPointSpreads,
-              dbs: mergedDBs,
-              survivor_pick: mergedSurvivor
-            }],
-            { onConflict: ["user_id", "week"] }
-          )
-          .select();
+    if (upsertError) throw upsertError;
+    console.log("✅ Weekly picks saved/merged:", upsertData);
+    
+    // Also update survivor_picks table (optional)
+    if (!survivorLost && survivorPick) {
+      const { data: survivorData, error: survivorError } = await supabase
+        .from("survivor_picks")
+        .upsert(
+          [{ user_id: user.id, week: weekNum, team: survivorPick }],
+          { onConflict: ["user_id", "week"] }
+        )
+        .select();
+      if (survivorError) throw survivorError;
+      console.log("✅ Survivor pick saved/merged:", survivorData);
+    }
 
-        if (upsertError) throw upsertError;
-        console.log("✅ Weekly picks saved/merged:", upsertData);
-        
+  } catch (err) {
+    console.error("Error saving picks:", err.message || err);
+    throw err;
+  }
+};
 
-        // Also update survivor_picks table (optional)
-        if (!survivorLost && survivorPick) {
-          const { data: survivorData, error: survivorError } = await supabase
-            .from("survivor_picks")
-            .upsert(
-              [{ user_id: user.id, week: weekNum, team: survivorPick }],
-              { onConflict: ["user_id", "week"] }
-            )
-            .select();
-          if (survivorError) throw survivorError;
-          console.log("✅ Survivor pick saved/merged:", survivorData);
-        }
-
-      } catch (err) {
-        console.error("Error saving picks:", err.message || err);
-        throw err;
-      }
-    };
 
 
 // ---- Submit First Game(s) ----
@@ -554,10 +607,15 @@ const onSubmitFirst = async () => {
   try {
     await saveToSupabase(); // Use central save function
 
-// 2️⃣ Get logged-in user
+    // 2️⃣ Get logged-in user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.email) throw new Error("User email not found");
 
+    // ------------------------------
+    // OPTIONAL: Send weekly picks email
+    // ------------------------------
+    // To disable email without losing code, comment out the fetch block:
+    /*
     // 3️⃣ Call your backend API to send the email
     await fetch("/api/sendWeeklyPicks", {
       method: "POST",
@@ -565,13 +623,12 @@ const onSubmitFirst = async () => {
       body: JSON.stringify({
         picks: selectedTeams,
         pointSpreads: pointSpreadSelection,
-        dbs: DBs,
+        dbs: computeDBs(),  // always up-to-date
         week: currentWeek.weekNumber,
         userEmail: user.email  // ✅ automatically uses the current user's email
       })
     });
-
-
+    */
 
     setSubmittedFirst(true);
     setConfirmMsg("First game pick submitted successfully.");
@@ -597,10 +654,15 @@ const onSubmitSecond = async () => {
   try {
     await saveToSupabase(); // Use central save function
 
-// 2️⃣ Get logged-in user
+    // 2️⃣ Get logged-in user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.email) throw new Error("User email not found");
 
+    // ------------------------------
+    // OPTIONAL: Send weekly picks email
+    // ------------------------------
+    // To disable email without losing code, comment out the fetch block:
+    /*
     // 3️⃣ Call your backend API to send the email
     await fetch("/api/sendWeeklyPicks", {
       method: "POST",
@@ -608,12 +670,12 @@ const onSubmitSecond = async () => {
       body: JSON.stringify({
         picks: selectedTeams,
         pointSpreads: pointSpreadSelection,
-        dbs: DBs,
+        dbs: computeDBs(), // <-- use current computed DBs
         week: currentWeek.weekNumber,
         userEmail: user.email  // ✅ automatically uses the current user's email
       })
     });
-
+    */
 
     setSubmittedSecond(true);
     setConfirmMsg("Rest of week picks submitted successfully.");
@@ -624,6 +686,7 @@ const onSubmitSecond = async () => {
     setWarnOpen(true);
   }
 };
+
 
 
 
@@ -690,8 +753,9 @@ if (!games || !games.length) {
 {(() => {
   // Compute last Thu/Fri/Sat index
   const lastFirstIndex = Math.max(
-    ...games.map((g, idx) => (["Thu", "Fri", "Sat"].includes(g.day) ? idx : -1))
-  );
+  ...games.map((g, idx) => (isFirstSubmitGame(g) ? idx : -1))
+);
+
 
   return games.map((game, idx) => {
     const locked = isFirstSubmitGame(game) ? firstLocked : secondLocked;
@@ -704,7 +768,8 @@ if (!games || !games.length) {
           <td className="p-3">{game.teams[0]} at {game.teams[1]}</td>
 
           {/* Day */}
-          <td className="p-3">{game.day}</td>
+          <td className="p-3">{getDayLabel(game)}</td>
+
 
           {/* Drive-By toggle */}
           <td className="p-3">{DBToggle(game, locked)}</td>
@@ -835,15 +900,16 @@ if (!games || !games.length) {
   {games.map((game, idx) => {
     const locked = isFirstSubmitGame(game) ? firstLocked : secondLocked;
     const lastFirstIndex = Math.max(
-      ...games.map((g, i) => (["Thu", "Fri", "Sat"].includes(g.day) ? i : -1))
-    );
+  ...games.map((g, i) => (isFirstSubmitGame(g) ? i : -1))
+);
+
 
     return (
       <React.Fragment key={game.id}>
         {/* Game card */}
         <div className="bg-white p-3 rounded shadow">
           <div className="font-semibold">{game.teams[0]} at {game.teams[1]}</div>
-          <div>Day: {game.day}</div>
+          <div>Day: {getDayLabel(game)}</div>
 
           {/* Drive-By toggle */}
           {DBToggle(game, locked)}

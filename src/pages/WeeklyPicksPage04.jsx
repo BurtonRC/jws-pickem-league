@@ -1,0 +1,801 @@
+// WeeklyPicksPage.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { supabase } from "../supabaseClient";
+import WarningModal from "../components/WarningModal";
+import * as leagueConfig from "../data/leagueConfig";
+import PageHeader from "@/components/PageHeader";
+
+/** Local confirmation modal (keeps your WarningModal for warnings only) */
+function ConfirmationModal({ isOpen, message, onClose }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-6 space-y-4">
+        <h2 className="text-xl font-bold text-green-600">Picks Submitted</h2>
+        <p className="text-gray-700">{message}</p>
+        <button
+          className="mt-2 w-full bg-green-500 text-white font-semibold py-2 rounded-xl hover:bg-green-600 active:bg-green-700 transition"
+          onClick={onClose}
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Upload New Week from ESPN
+export const manualWeekNumber = 4; // <-- manually set the week you want
+
+export default function WeeklyPicksPage() {
+  
+  // Core selection state (unchanged)
+  const [selectedTeams, setSelectedTeams] = useState({});
+  const [sliderOn, setSliderOn] = useState({});
+  const [pointSpreadSelection, setPointSpreadSelection] = useState({});
+
+  // Three-phase submission locks
+  const [submittedFirst, setSubmittedFirst] = useState(false);
+  const [submittedSecond, setSubmittedSecond] = useState(false);
+  const [submittedThird, setSubmittedThird] = useState(false);
+
+  // Countdown strings
+  const [timeFirst, setTimeFirst] = useState(null);
+  const [timeSecond, setTimeSecond] = useState(null);
+  const [timeThird, setTimeThird] = useState(null);
+
+  // Survivor
+  const [survivorPick, setSurvivorPick] = useState("");
+  const [survivorLost, setSurvivorLost] = useState(false);
+  const [pickedTeams, setPickedTeams] = useState([]);
+  const [survivorPicks, setSurvivorPicks] = useState([]);
+
+
+  // Auth user
+  const [user, setUser] = useState(null);
+
+  // Modals
+  const [warnOpen, setWarnOpen] = useState(false);
+  const [warnMessages, setWarnMessages] = useState([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmMsg, setConfirmMsg] = useState("");
+
+  // Weeks & games
+  const [currentWeek, setCurrentWeek] = useState(null);
+  const [games, setGames] = useState([]);
+  const [allTeams, setAllTeams] = useState([]);
+
+  // Track Drive-By (DB) picks separately
+  const [DBs, setDBs] = useState({});
+
+  // Helper: determine if a game is in the first submit group (Thu-Fri-Sat)
+  const isFirstSubmitGame = (game) => ["Thu", "Fri", "Sat"].includes(game.day);
+
+  // Helper: check if a game's kickoff has already passed
+  const hasGameStarted = (game) => {
+    if (!game.date) return false;
+    return new Date(game.date) < new Date();
+  };
+
+  // Map of previously picked teams (won) for the survivor dropdown
+  const previousPickMap = useMemo(() => {
+    const map = {};
+    if (!survivorPicks || !currentWeek) return map;
+
+    survivorPicks
+      .filter(
+        (pick) =>
+          pick.week < currentWeek.weekNumber &&
+          pick.result?.toLowerCase() === "win"
+      )
+      .forEach((pick) => {
+        map[pick.team.trim().toLowerCase()] = true;
+      });
+
+    return map;
+  }, [survivorPicks, currentWeek]);
+
+
+  // TEMP: Log game IDs for leagueConfig
+  useEffect(() => {
+    const fetchAndLogGameIDs = async () => {
+      try {
+        const res = await fetch(
+          `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${manualWeekNumber}`
+        );
+        const data = await res.json();
+
+        if (!data.events || data.events.length === 0) {
+          console.log("No events found for this week.");
+          return;
+        }
+
+        console.log("=== Game IDs for driveByGames ===");
+        data.events.forEach((game) => {
+          console.log(`${game.id}: ${game.name}`);
+        });
+        console.log("=== End of Game IDs ===");
+      } catch (err) {
+        console.error("Error fetching ESPN games:", err);
+      }
+    };
+
+    fetchAndLogGameIDs();
+  }, []);
+
+
+  useEffect(() => {
+    const fetchWeekGames = async () => {
+      console.log("Fetching schedule for manual week:", manualWeekNumber);
+
+      try {
+        const year = new Date().getFullYear();
+        const resWeek = await fetch(
+          `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?year=${year}&seasontype=2&week=${manualWeekNumber}`
+        );
+        const weekData = await resWeek.json();
+
+        const weekGames = (weekData.events || []).map((game) => {
+          const matchup = game.name.split(" at ");
+          const kickoffUTC = new Date(game.date);
+          const day = kickoffUTC.toLocaleString("en-US", { weekday: "short" });
+
+          return {
+            id: game.id,
+            teams: matchup,
+            dbTeam: "",       
+            dbLabel: "",      
+            pointSpread: [],  
+            day,              
+            kickoffUTC: kickoffUTC.toISOString(), 
+          };
+        });
+
+        const mappedGames = weekGames.map((game) => {
+          const gameIdStr = String(game.id);
+          const dbTeam = leagueConfig.driveByGames[gameIdStr] || "";
+          const dbLabel = dbTeam ? "DB" : "";
+          const ps = leagueConfig.pointSpreads[gameIdStr] || [];
+
+          return {
+            ...game,
+            dbTeam,
+            dbLabel,
+            pointSpread: ps,
+          };
+        });
+
+        const sortedGames = [
+          ...mappedGames
+            .filter(g => ["Thu", "Fri", "Sat"].includes(g.day))
+            .sort((a, b) => new Date(a.kickoffUTC) - new Date(b.kickoffUTC)),
+          ...mappedGames
+            .filter(g => !["Thu", "Fri", "Sat"].includes(g.day))
+            .sort((a, b) => new Date(a.kickoffUTC) - new Date(b.kickoffUTC))
+        ];
+
+        setCurrentWeek({ weekNumber: manualWeekNumber });
+        setGames(sortedGames);
+        setAllTeams(
+          Array.from(new Set(sortedGames.flatMap((game) => game.teams)))
+        );
+
+      } catch (err) {
+        console.error("Failed to fetch/load NFL schedule:", err);
+      }
+    };
+
+    fetchWeekGames();
+  }, []);
+
+  useEffect(() => {
+    const initialSliders = {};
+    games.forEach((g) => {
+      if (selectedTeams[g.id] === g.dbTeam) {
+        initialSliders[g.id] = true;
+      }
+    });
+    setSliderOn(initialSliders);
+  }, [games, selectedTeams]);
+
+  // ✅ Get logged-in user from Supabase
+  useEffect(() => {
+    const getUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Error fetching user:", error);
+        return;
+      }
+      setUser(data.user);
+    };
+    getUser();
+  }, []);
+
+  // ✅ Fetch all past survivor picks for this user
+  useEffect(() => {
+    async function fetchSurvivorPicks() {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("survivor_picks")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Error fetching survivor picks:", error);
+      } else {
+        setSurvivorPicks(data);
+      }
+    }
+
+    fetchSurvivorPicks();
+  }, [user]);
+
+  // ------------------------------
+  // Kickoff helpers
+  // ------------------------------
+  const firstKickoff = useMemo(() => {
+    const firstGames = games.filter(g => ["Thu", "Fri", "Sat"].includes(g.day));
+    if (firstGames.length === 0) return null;
+    return new Date(Math.min(...firstGames.map(g => new Date(g.kickoffUTC).getTime())));
+  }, [games]);
+
+  // Minnesota vs Pittsburgh will be the "third" submit (but comes before last submit)
+  const thirdKickoff = useMemo(() => {
+    const game = games.find(g => g.teams.includes("Minnesota Vikings") && g.teams.includes("Pittsburgh Steelers"));
+    if (!game) return null;
+    return new Date(game.kickoffUTC);
+  }, [games]);
+
+  const secondKickoff = useMemo(() => {
+    const secondGames = games.filter(g => {
+      // Exclude first submit games and third submit
+      const isThird = g.teams.includes("Minnesota Vikings") && g.teams.includes("Pittsburgh Steelers");
+      return !["Thu", "Fri", "Sat"].includes(g.day) && !isThird;
+    });
+    if (secondGames.length === 0) return null;
+    return new Date(Math.min(...secondGames.map(g => new Date(g.kickoffUTC).getTime())));
+  }, [games]);
+
+  // ------------------------------
+  // Countdown effect
+  // ------------------------------
+  useEffect(() => {
+    const setupCountdown = (kickoff, setStr) => {
+      if (!kickoff) {
+        setStr("Kickoff time TBD");
+        return () => {};
+      }
+
+      const update = () => {
+        const diff = kickoff - new Date();
+        if (diff <= 0) {
+          setStr("Kickoff reached!");
+        } else {
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          setStr(`Time until kickoff: ${hours}h ${minutes}m ${seconds}s`);
+        }
+      };
+
+      update();
+      const timerId = setInterval(update, 1000);
+      return () => clearInterval(timerId);
+    };
+
+    const cleanupFirst = setupCountdown(firstKickoff, setTimeFirst);
+    const cleanupThird = setupCountdown(thirdKickoff, setTimeThird);
+    const cleanupSecond = setupCountdown(secondKickoff, setTimeSecond);
+
+    return () => {
+      cleanupFirst();
+      cleanupThird();
+      cleanupSecond();
+    };
+  }, [firstKickoff, thirdKickoff, secondKickoff]);
+
+  // ------------------------------
+  // Locked states
+  // ------------------------------
+  const firstLocked = submittedFirst || timeFirst === "Kickoff reached!";
+  const thirdLocked = submittedThird || timeThird === "Kickoff reached!";
+  const secondLocked = submittedSecond || timeSecond === "Kickoff reached!";
+
+  // ---- Toggle, select, and DB helpers ----
+  const toggleSlider = (id, checked, dbTeam) => {
+    setSliderOn((prev) => ({ ...prev, [id]: checked }));
+    setSelectedTeams((prev) => ({ ...prev, [id]: checked ? dbTeam : "" }));
+    setDBs((prev) => {
+      const newDBs = { ...prev };
+      if (checked) newDBs[id] = dbTeam;
+      else delete newDBs[id];
+      return newDBs;
+    });
+  };
+
+  const handleSelectChange = (id, value, dbTeam) => {
+    setSelectedTeams((prev) => ({ ...prev, [id]: value }));
+    setSliderOn((prev) => ({ ...prev, [id]: value === dbTeam }));
+  };
+
+  const handlePointSpreadChange = (id, value) => {
+    setPointSpreadSelection((prev) => ({ ...prev, [id]: value }));
+  };
+
+  // ---- Validation for third submit ----
+  const validateThird = () => {
+    const msgs = [];
+    const game = games.find(g => g.teams.includes("Minnesota Vikings") && g.teams.includes("Pittsburgh Steelers"));
+    if (!game) return msgs;
+
+    if (!selectedTeams[game.id]) msgs.push("Select the winner for Minnesota Vikings at Pittsburgh Steelers.");
+    if (game.pointSpread?.length && !pointSpreadSelection[game.id]) msgs.push("Select the point spread for Minnesota Vikings at Pittsburgh Steelers.");
+
+    return msgs;
+  };
+
+  // ---- Submit handlers ----
+  const saveToSupabase = async () => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error("No logged-in user");
+      if (!currentWeek?.weekNumber) throw new Error("Week number not determined.");
+      const weekNum = currentWeek.weekNumber;
+
+      const { data: existingData } = await supabase
+        .from("weekly_picks")
+        .select("picks, point_spreads, dbs, survivor_pick")
+        .eq("user_id", user.id)
+        .eq("week", weekNum)
+        .maybeSingle();
+
+      const mergedPicks = { ...(existingData?.picks || {}), ...selectedTeams };
+      const mergedPointSpreads = { ...(existingData?.point_spreads || {}), ...pointSpreadSelection };
+      const mergedDBs = { ...(existingData?.dbs || {}), ...DBs };
+      const mergedSurvivor = survivorPick || existingData?.survivor_pick || null;
+
+      await supabase
+        .from("weekly_picks")
+        .upsert([{
+          user_id: user.id,
+          week: weekNum,
+          picks: mergedPicks,
+          point_spreads: mergedPointSpreads,
+          dbs: mergedDBs,
+          survivor_pick: mergedSurvivor
+        }], { onConflict: ["user_id", "week"] });
+
+    } catch (err) {
+      console.error("Error saving picks:", err.message || err);
+      throw err;
+    }
+  };
+
+  const onSubmitFirst = async () => { /* unchanged */ };
+  const onSubmitSecond = async () => { /* unchanged */ };
+
+  const onSubmitThird = async () => {
+    if (thirdLocked) return;
+
+    const msgs = validateThird();
+    if (msgs.length) {
+      setWarnMessages(msgs);
+      setWarnOpen(true);
+      return;
+    }
+
+    try {
+      await saveToSupabase();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) throw new Error("User email not found");
+
+      await fetch("/api/sendWeeklyPicks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          picks: selectedTeams,
+          pointSpreads: pointSpreadSelection,
+          dbs: DBs,
+          week: currentWeek.weekNumber,
+          userEmail: user.email
+        })
+      });
+
+      setSubmittedThird(true);
+      setConfirmMsg("Minnesota vs Pittsburgh pick submitted successfully.");
+      setConfirmOpen(true);
+    } catch (err) {
+      console.error("Error saving picks (Submit #3):", err);
+      setWarnMessages(["There was a problem saving your pick. Please try again."]);
+      setWarnOpen(true);
+    }
+  };
+
+  if (!games || !games.length) return <div className="loading-container">Loading games...</div>;
+
+
+  // Helper: shared cell content for DB toggle
+  const DBToggle = (game, disabled) =>
+    game.dbLabel && (
+      <div className={`flex items-center gap-2 ${disabled ? "opacity-50" : ""}`}>
+        <span>{game.dbLabel ? `${game.dbLabel}: ${dbTeamCity(game.dbTeam)}` : ""}</span>
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={sliderOn[game.id] || false}
+            onChange={(e) => toggleSlider(game.id, e.target.checked, game.dbTeam)}
+            className="sr-only peer"
+            disabled={disabled}
+          />
+          <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+        </label>
+      </div>
+    );
+
+  // Helper for DB team names
+      const dbTeamCity = (dbTeam) => {
+      const mapping = {
+        "Dallas Cowboys": "Dallas",
+        "Kansas City Chiefs": "Kansas City",
+        "Tampa Bay Buccaneers": "Tampa Bay",
+        "Los Angeles Rams": "LA Rams",
+        "Los Angeles Chargers": "LA Chargers",
+        "New York Giants": "NY Giants",
+        "New York Jets": "NY Jets",
+        "New Orleans Saints": "New Orleans",
+        // add all other teams as needed
+      };
+      return mapping[dbTeam] || dbTeam.split(" ")[0]; // fallback
+    };
+
+
+ // ---- UI ----
+return (
+  <div className="min-h-screen bg-gray-50 px-6 pt-6">
+    <div className="w-full max-w-5xl mx-auto space-y-4">
+      <PageHeader>
+        Weekly Picks Wk {currentWeek.weekNumber}
+      </PageHeader>
+
+      {/* ===== DESKTOP TABLE ===== */}
+      <table className="hidden md:table w-full border-collapse">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="p-3 text-left w-1/4">Matchup</th>
+            <th className="p-3 text-left w-1/6">Day</th>
+            <th className="p-3 text-left w-1/6">DB</th>
+            <th className="p-3 text-left w-1/4">Point Spread</th>
+            <th className="p-3 text-left w-1/4">Select</th>
+          </tr>
+        </thead>
+
+<tbody>
+{(() => {
+  // Compute last Thu/Fri/Sat index
+  const lastFirstIndex = Math.max(
+    ...games.map((g, idx) => (["Thu", "Fri", "Sat"].includes(g.day) ? idx : -1))
+  );
+
+  // Find index of Minnesota vs Pittsburgh for the third submit
+  const thirdSubmitIndex = games.findIndex(
+    (g) =>
+      g.teams.includes("Minnesota Vikings") &&
+      g.teams.includes("Pittsburgh Steelers")
+  );
+
+  return games.map((game, idx) => {
+    const locked = isFirstSubmitGame(game) ? firstLocked : secondLocked;
+
+    return (
+      <React.Fragment key={game.id}>
+        {/* ===== MATCHUP ROW ===== */}
+        <tr>
+          {/* Matchup */}
+          <td className="p-3">{game.teams[0]} at {game.teams[1]}</td>
+
+          {/* Day */}
+          <td className="p-3">{game.day}</td>
+
+          {/* Drive-By toggle */}
+          <td className="p-3">{DBToggle(game, locked)}</td>
+
+          {/* Point Spread select */}
+          <td className="p-3">
+            {game.pointSpread?.length > 0 && (
+              <select
+                className={`border rounded p-1 w-full ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
+                value={pointSpreadSelection[game.id] || ""}
+                onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
+                disabled={locked}
+              >
+                <option value="">-- Disruptor Point Spread --</option>
+                {game.pointSpread.map((ps, psIdx) => (
+                  <React.Fragment key={psIdx}>
+                    <option value={`${game.teams[0]} ${ps >= 0 ? "+" : ""}${ps}`}>
+                      {game.teams[0]} {ps >= 0 ? "+" : ""}{ps}
+                    </option>
+                    <option value={`${game.teams[1]} ${ps <= 0 ? "+" : ""}${-ps}`}>
+                      {game.teams[1]} {ps <= 0 ? "+" : ""}{-ps}
+                    </option>
+                  </React.Fragment>
+                ))}
+              </select>
+            )}
+          </td>
+
+          {/* Team selection */}
+          <td className="p-3">
+            <select
+              className={`border rounded p-1 w-full ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
+              value={selectedTeams[game.id] || ""}
+              onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
+              disabled={locked}
+            >
+              <option value="">-- Select Team --</option>
+              {game.teams.map((team) => (
+                <option key={team} value={team}>{team}</option>
+              ))}
+            </select>
+          </td>
+        </tr>
+
+        {/* ===== SUBMIT FIRST GAME(S) BUTTON ROW ===== */}
+        {idx === lastFirstIndex && (
+          <tr>
+            <td colSpan={5} className="p-3">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg bg-white border p-3">
+                <span className="font-semibold">{timeFirst || "Kickoff time TBD"}</span>
+                <button
+                  onClick={onSubmitFirst}
+                  disabled={firstLocked}
+                  className={`px-4 py-2 rounded font-semibold text-white transition
+                    ${firstLocked ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600 active:bg-green-700"}`}
+                >
+                  Submit First Game(s)
+                </button>
+              </div>
+            </td>
+          </tr>
+        )}
+
+        {/* ===== SUBMIT THIRD (Minnesota vs Pittsburgh) ===== */}
+        {idx === thirdSubmitIndex && (
+          <tr>
+            <td colSpan={5} className="p-3">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg bg-white border p-3 w-full">
+                <span className="font-semibold">{timeThird || "Kickoff time TBD"}</span>
+                <button
+                  onClick={onSubmitThird}
+                  disabled={thirdLocked}
+                  className={`px-4 py-2 rounded font-semibold text-white transition
+                    ${thirdLocked ? "bg-gray-400 cursor-not-allowed" : "bg-purple-500 hover:bg-purple-600 active:bg-purple-700"}`}
+                >
+                  Submit Minnesota vs Pittsburgh
+                </button>
+              </div>
+            </td>
+          </tr>
+        )}
+
+      </React.Fragment>
+    );
+  });
+})()}
+
+{/* ===== SURVIVOR ROW - DESKTOP ===== */}
+{!survivorLost && (
+<tr className="bg-gray-50">
+  <td colSpan={4} className="p-3 font-semibold">
+    Survivor Pick:
+  </td>
+  <td className="p-3">
+    <select
+      className={`border rounded p-1 w-full ${
+        survivorPick ? "bg-yellow-200" : ""
+      } ${secondLocked || survivorLost ? "opacity-60 cursor-not-allowed" : ""}`}
+      value={survivorPick}
+      onChange={(e) => setSurvivorPick(e.target.value)}
+      disabled={secondLocked || survivorLost}
+    >
+      <option value="">-- Select Team --</option>
+
+      {allTeams.map((team) => {
+        const isUsed = previousPickMap[team.trim().toLowerCase()] || false;
+
+        return (
+          <option
+            key={team}
+            value={team}
+            disabled={isUsed || survivorLost}
+            style={isUsed ? { color: "gray" } : {}}
+          >
+            {team} {isUsed ? "(used)" : ""}
+          </option>
+        );
+      })}
+    </select>
+  </td>
+</tr>
+)}
+
+{/* ===== SUBMIT SECOND BUTTON ROW ===== */}
+{games.length > 1 && (
+  <tr>
+    <td colSpan={5} className="p-3">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg bg-white border p-3">
+        <span className="font-semibold">{timeSecond || "Kickoff time TBD"}</span>
+        <button
+          onClick={onSubmitSecond}
+          disabled={secondLocked}
+          className={`px-4 py-2 rounded font-semibold text-white transition
+            ${secondLocked ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 active:bg-blue-700"}`}
+        >
+          Submit Rest of Picks
+        </button>
+      </div>
+    </td>
+  </tr>
+)}
+</tbody>
+</table>
+
+{/* ===== MOBILE CARDS ===== */}
+<div className="md:hidden space-y-4">
+  {games.map((game, idx) => {
+    const locked = isFirstSubmitGame(game) ? firstLocked : secondLocked;
+    const lastFirstIndex = Math.max(
+      ...games.map((g, i) => (["Thu", "Fri", "Sat"].includes(g.day) ? i : -1))
+    );
+
+    // Find third submit index for mobile
+    const thirdSubmitIndex = games.findIndex(
+      (g) =>
+        g.teams.includes("Minnesota Vikings") &&
+        g.teams.includes("Pittsburgh Steelers")
+    );
+
+    return (
+      <React.Fragment key={game.id}>
+        {/* Game card */}
+        <div className="bg-white p-3 rounded shadow">
+          <div className="font-semibold">{game.teams[0]} at {game.teams[1]}</div>
+          <div>Day: {game.day}</div>
+
+          {/* Drive-By toggle */}
+          {DBToggle(game, locked)}
+
+          {/* Point Spread select */}
+          {game.pointSpread?.length > 0 && (
+            <select
+              className={`border rounded p-1 w-full mt-2 ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
+              value={pointSpreadSelection[game.id] || ""}
+              onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
+              disabled={locked}
+            >
+              <option value="">-- Select Point Spread --</option>
+              {game.pointSpread.map((ps, psIdx) => (
+                <React.Fragment key={psIdx}>
+                  <option value={`${game.teams[0]} ${ps >= 0 ? "+" : ""}${ps}`}>
+                    {game.teams[0]} {ps >= 0 ? "+" : ""}{ps}
+                  </option>
+                  <option value={`${game.teams[1]} ${ps <= 0 ? "+" : ""}${-ps}`}>
+                    {game.teams[1]} {ps <= 0 ? "+" : ""}{-ps}
+                  </option>
+                </React.Fragment>
+              ))}
+            </select>
+          )}
+
+          {/* Team selection */}
+          <select
+            className={`border rounded p-1 w-full mt-2 ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
+            value={selectedTeams[game.id] || ""}
+            onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
+            disabled={locked}
+          >
+            <option value="">-- Select Team --</option>
+            {game.teams.map((team) => (
+              <option key={team} value={team}>{team}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Submit First Game(s) card */}
+        {idx === lastFirstIndex && (
+          <div className="bg-white p-3 rounded shadow flex flex-col gap-3">
+            <span className="font-semibold">{timeFirst || "Kickoff time TBD"}</span>
+            <button
+              onClick={onSubmitFirst}
+              disabled={firstLocked}
+              className={`w-full px-4 py-2 rounded font-semibold text-white transition
+                ${firstLocked ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600 active:bg-green-700"}`}
+            >
+              Submit First Game(s)
+            </button>
+          </div>
+        )}
+
+        {/* Submit Third (Minnesota vs Pittsburgh) card */}
+        {idx === thirdSubmitIndex && (
+          <div className="bg-white p-3 rounded shadow flex flex-col gap-3">
+            <span className="font-semibold">{timeThird || "Kickoff time TBD"}</span>
+            <button
+              onClick={onSubmitThird}
+              disabled={thirdLocked}
+              className={`w-full px-4 py-2 rounded font-semibold text-white transition
+                ${thirdLocked ? "bg-gray-400 cursor-not-allowed" : "bg-purple-500 hover:bg-purple-600 active:bg-purple-700"}`}
+            >
+              Submit Minnesota vs Pittsburgh
+            </button>
+          </div>
+        )}
+
+      </React.Fragment>
+    );
+  })}
+
+{/* Survivor Pick Card / Mobile */}
+{!survivorLost && (
+  <div className="bg-white p-3 rounded shadow mb-4">
+    <div className="font-semibold">Survivor Pick:</div>
+    <select
+      className={`border rounded p-2 w-full min-w-[200px] ${
+        survivorPick ? "bg-yellow-200" : ""
+      } ${secondLocked || survivorLost ? "opacity-60 cursor-not-allowed" : ""}`}
+      value={survivorPick}
+      onChange={(e) => setSurvivorPick(e.target.value)}
+      disabled={secondLocked || survivorLost}
+    >
+      <option value="">-- Select Team --</option>
+
+      {allTeams.map((team) => {
+        const isUsed = previousPickMap[team.trim().toLowerCase()] || false;
+
+        return (
+          <option
+            key={team}
+            value={team}
+            disabled={isUsed || survivorLost}
+            style={isUsed ? { color: "gray" } : {}}
+          >
+            {team} {isUsed ? "(used)" : ""}
+          </option>
+        );
+      })}
+    </select>
+  </div>
+)}
+
+  {/* Submit Rest of Picks card */}
+  {games.length > 1 && (
+    <div className="bg-white p-3 rounded shadow flex flex-col gap-3">
+      <span className="font-semibold">{timeSecond || "Kickoff time TBD"}</span>
+      <button
+        onClick={onSubmitSecond}
+        disabled={secondLocked}
+        className={`w-full px-4 py-2 rounded font-semibold text-white transition
+          ${secondLocked ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 active:bg-blue-700"}`}
+      >
+        Submit Rest of Picks
+      </button>
+    </div>
+  )}
+</div>
+
+{/* Warning + Confirmation Modals */}
+<WarningModal
+  isOpen={warnOpen}
+  messages={warnMessages}
+  onClose={() => setWarnOpen(false)}
+/>
+<ConfirmationModal
+  isOpen={confirmOpen}
+  message={confirmMsg}
+  onClose={() => setConfirmOpen(false)}
+/>
+    </div>
+  </div>
+);
+}

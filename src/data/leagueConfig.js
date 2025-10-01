@@ -1,23 +1,19 @@
 // data/leagueConfig.js
 export const driveByGames = {
-  "401772740": "New Orleans Saints", // Game ID → DB team
+  "401772939": "San Francisco 49ers", // Game ID → DB team
   
-  "401772846": "Cleveland Browns",  
+  "401772851": "Las Vegas Raiders",  
 
-  "401772847": "Carolina Panthers",
+  "401772747": "Tennessee Titans",
 
-  "401772737": "New York Giants",
+  "401772854": "Cincinnati Bengals",
 
-  "401772738": "Tennessee Titans",
-
-  "401772921": "Dallas Cowboys",
-
-  "401772716": "Cincinnati Bengals",
+  "401772922": "New England Patriots",
 
   // add all other DB games for the week
 };
 
 export const pointSpreads = {
-  "401772849": [3.5]  // This will generate:
+  "401772922": [-8.5]  // This will generate:
   // "Green Bay -2.5" and "Detroit +2.5" in your dropdown automatically
 };
