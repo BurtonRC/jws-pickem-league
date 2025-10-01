@@ -724,6 +724,9 @@ if (!games || !games.length) {
         "New York Giants": "NY Giants",
         "New York Jets": "NY Jets",
         "New Orleans Saints": "New Orleans",
+        "San Francisco 49ers": "San Francisco",
+        "Las Vegas Raiders": "Las Vegas",
+        "New England Patriots": "New England"
         // add all other teams as needed
       };
       return mapping[dbTeam] || dbTeam.split(" ")[0]; // fallback
