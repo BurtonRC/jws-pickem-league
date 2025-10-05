@@ -326,7 +326,7 @@ useEffect(() => {
     const update = () => {
       const diff = kickoff - new Date();
       if (diff <= 0) {
-        setStr("Kickoff reached!");
+        setStr("Kickoff TBD");
       } else {
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -361,7 +361,7 @@ useEffect(() => {
 // ------------------------------
 // Only lock when the countdown has reached "Kickoff reached!" or the user has submitted
 const firstLocked = submittedFirst || timeFirst === "Kickoff reached!";
-const secondLocked = submittedSecond || timeSecond === "Kickoff reached!";
+const secondLocked = submittedSecond; //|| timeSecond === "Kickoff reached!";
 
 
 // Optional debug
