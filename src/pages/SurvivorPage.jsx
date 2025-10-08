@@ -61,64 +61,74 @@ export default function SurvivorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-6 pt-6">
-      <div className="w-full max-w-5xl mx-auto space-y-4">
-        <PageHeader>Survivor Picks</PageHeader>
+    <div className="min-h-screen bg-gray-50 px-4 sm:px-6 pt-6">
+  <div className="w-full max-w-5xl mx-auto space-y-4">
+    <PageHeader>Survivor Picks</PageHeader>
 
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 text-center">User</th>
-              {Array.from({ length: maxWeek }, (_, i) => (
-                <th key={i + 1} className="p-2 text-center">
-                  Week {i + 1}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Object.keys(survivorData)
-              .sort() // ✅ Sort users alphabetically
-              .map((user) => {
-                const picks = survivorData[user];
-                let eliminated = false; // ✅ Track if user is out
+    {/* ✅ Responsive scroll wrapper */}
+    <div className="overflow-x-auto sm:overflow-x-visible border border-gray-200 rounded-lg shadow-sm">
+      <table className="min-w-full sm:table-fixed border-collapse">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="p-2 text-center sticky left-0 bg-gray-100 z-10">
+              User
+            </th>
+            {Array.from({ length: maxWeek }, (_, i) => (
+              <th key={i + 1} className="p-2 text-center">
+                Week {i + 1}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Object.keys(survivorData)
+            .sort()
+            .map((user) => {
+              const picks = survivorData[user];
+              let eliminated = false;
 
-                return (
-                  <tr key={user} className="border-b border-gray-300">
-                    <td className="p-2 font-semibold text-center">{user}</td>
-                    {Array.from({ length: maxWeek }, (_, i) => {
-                      const weekNum = i + 1;
-                      const pick = picks[weekNum];
+              return (
+                <tr key={user} className="border-b border-gray-300">
+                  <td className="p-2 font-semibold text-center sticky left-0 bg-white z-10">
+                    {user}
+                  </td>
+                  {Array.from({ length: maxWeek }, (_, i) => {
+                    const weekNum = i + 1;
+                    const pick = picks[weekNum];
 
-                      if (!pick || pick.result === "pending") return <td key={weekNum} className="p-2 text-center" />;
-
-                      const { team, result } = pick;
-                      const logo = team ? teamLogos[team] : null;
-
-                      // ✅ Dim losing pick, mark user as eliminated
-                      const isDimmed = eliminated || result === "loss";
-                      if (result === "loss") eliminated = true;
-
+                    if (!pick || pick.result === "pending")
                       return (
-                        <td key={weekNum} className="p-2 text-center">
-                          {logo ? (
-                            <img
-                              src={`${import.meta.env.BASE_URL}${logo}`}
-                              alt={team}
-                              className={`w-12 h-12 mx-auto ${isDimmed ? "opacity-20" : ""}`}
-                            />
-                          ) : (
-                            team || ""
-                          )}
-                        </td>
+                        <td key={weekNum} className="p-2 text-center" />
                       );
-                    })}
-                  </tr>
-                );
-              })}
-          </tbody>
-        </table>
-      </div>
+
+                    const { team, result } = pick;
+                    const logo = team ? teamLogos[team] : null;
+                    const isDimmed = eliminated || result === "loss";
+                    if (result === "loss") eliminated = true;
+
+                    return (
+                      <td key={weekNum} className="p-2 text-center">
+                        {logo ? (
+                          <img
+                            src={`${import.meta.env.BASE_URL}${logo}`}
+                            alt={team}
+                            className={`w-10 h-10 mx-auto ${
+                              isDimmed ? "opacity-20" : ""
+                            }`}
+                          />
+                        ) : (
+                          team || ""
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+        </tbody>
+      </table>
     </div>
+  </div>
+</div>
   );
 }
