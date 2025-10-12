@@ -106,7 +106,7 @@ async function syncWeek(week) {
 
   // call compute function
   try {
-    const { data, error } = await supabase.rpc('compute_weekly_results', { week });
+    const { data, error } = await supabase.rpc('compute_weekly_results', { target_week: week });
     if (error) throw error;
     console.log('compute_weekly_results executed for week', week);
   } catch (err) {
