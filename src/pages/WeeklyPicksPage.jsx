@@ -25,7 +25,7 @@ function ConfirmationModal({ isOpen, message, onClose }) {
 }
 
 // Upload New Week from ESPN
-export const manualWeekNumber = 6; // <-- manually set the week you want
+export const manualWeekNumber = 7; // <-- manually set the week you want
 
 export default function WeeklyPicksPage() {
   
@@ -698,6 +698,7 @@ if (!games || !games.length) {
         "New York Giants": "NY Giants",
         "New York Jets": "NY Jets",
         "New Orleans Saints": "New Orleans",
+        "Las Vegas Raiders" : "Las Vegas"
         // add all other teams as needed
       };
       return mapping[dbTeam] || dbTeam.split(" ")[0]; // fallback
