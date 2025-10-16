@@ -1,4 +1,12 @@
 import { useEffect, useState, useRef } from "react";
+import { createClient } from '@supabase/supabase-js';
+
+// --- Initialize Supabase client (outside the component so it isn't recreated) ---
+// Make sure your .env has VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 export default function Scoreboard({ collapsed }) {
   const [scores, setScores] = useState([]);
@@ -54,6 +62,9 @@ export default function Scoreboard({ collapsed }) {
     return `/logos/${fileName}.png`;
   };
 
+  // --- Team Records State ---
+  const [teamRecords, setTeamRecords] = useState({});
+
   // --- Week mapping ---
   const weekMap = {
     pre1: { seasontype: 1, week: 1, label: "Pre Week 1" },
@@ -72,55 +83,147 @@ export default function Scoreboard({ collapsed }) {
     post4: { seasontype: 3, week: 4, label: "Super Bowl" },
   };
 
-  // --- Fetch scores for selected week ---
   useEffect(() => {
-    const fetchScores = async () => {
+  const fetchScoresAndRecords = async () => {
+    try {
+      // --- Fetch scores from ESPN ---
+      let baseUrl =
+        "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+      let url =
+        week !== "current"
+          ? `${baseUrl}?seasontype=${weekMap[week].seasontype}&week=${weekMap[week].week}`
+          : baseUrl;
+
+      let json = null;
       try {
-        let baseUrl = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
-        let url = baseUrl;
-
-        // If user manually selected a week, use it
-        if (week !== "current") {
-          const { seasontype, week: wk } = weekMap[week];
-          url = `${baseUrl}?seasontype=${seasontype}&week=${wk}`;
-        }
-
         const resp = await fetch(url);
-        if (!resp.ok) throw new Error("Score API error");
-        const json = await resp.json();
+        if (resp.ok) {
+          json = await resp.json();
+          setScores(json.events || []);
+          const espnCurrentWeek = json.season?.week || 1;
+          setCurrentWeek(espnCurrentWeek);
 
-        setScores(json.events || []);
-
-        // Automatically track the current week from ESPN API
-        const espnCurrentWeek = json.season?.week || 1;
-        setCurrentWeek(espnCurrentWeek);
-
-        // If the user is viewing "current", auto-advance week if all games finished
-        if (week === "current") {
-          const allGamesFinished = (json.events || []).every(
-            (g) => g.status?.type?.completed === true
-          );
-
-          if (allGamesFinished && espnCurrentWeek < 18) {
-            // Move to the next week automatically
-            const nextWeekKey = `reg${espnCurrentWeek + 1}`;
-            setWeek(nextWeekKey);
+          // Auto-advance week if current and all games finished
+          if (week === "current") {
+            const allGamesFinished = (json.events || []).every(
+              (g) => g.status?.type?.completed === true
+            );
+            if (allGamesFinished && espnCurrentWeek < 18) {
+              setWeek(`reg${espnCurrentWeek + 1}`);
+            }
           }
+        } else {
+          console.warn("Score API returned non-OK:", resp.status);
+          setScores([]);
         }
-      } catch {
-        setError("Unable to load scores. Try again later.");
+      } catch (err) {
+        console.warn("Scores fetch failed:", err);
+        setScores([]);
       }
+
+// --- Fetch team records from Supabase ---
+try {
+  const { data, error: sbError } = await supabase
+    .from("game_results")
+    .select("home_team, away_team, winner");
+
+  if (sbError) {
+    console.warn("Supabase query error:", sbError);
+    setTeamRecords({});
+  } else if (!data) {
+    setTeamRecords({});
+  } else {
+    // --- Map database team names to abbreviations ---
+    const abbrMap = {
+      "Arizona Cardinals": "ari",
+      "Atlanta Falcons": "atl",
+      "Baltimore Ravens": "bal",
+      "Buffalo Bills": "buf",
+      "Carolina Panthers": "car",
+      "Chicago Bears": "chi",
+      "Cincinnati Bengals": "cin",
+      "Cleveland Browns": "cle",
+      "Dallas Cowboys": "dal",
+      "Denver Broncos": "den",
+      "Detroit Lions": "det",
+      "Green Bay Packers": "gb",
+      "Houston Texans": "hou",
+      "Indianapolis Colts": "ind",
+      "Jacksonville Jaguars": "jax",
+      "Kansas City Chiefs": "kc",
+      "Las Vegas Raiders": "lv",
+      "Los Angeles Chargers": "lac",
+      "Los Angeles Rams": "lar",
+      "Miami Dolphins": "mia",
+      "Minnesota Vikings": "min",
+      "New England Patriots": "ne",
+      "New Orleans Saints": "no",
+      "New York Giants": "nyg",
+      "New York Jets": "nyj",
+      "Philadelphia Eagles": "phi",
+      "Pittsburgh Steelers": "pit",
+      "San Francisco 49ers": "sf",
+      "Seattle Seahawks": "sea",
+      "Tampa Bay Buccaneers": "tb",
+      "Tennessee Titans": "ten",
+      "Washington Commanders": "wsh",
     };
 
-    fetchScores();
-    const interval = setInterval(fetchScores, 60000); // refresh every minute
-    return () => clearInterval(interval);
-  }, [week]);
+    // Initialize records with W-L-T
+    const recs = {};
+    Object.keys(teamLogoMap).forEach((k) => {
+      recs[k] = { wins: 0, losses: 0, ties: 0 };
+    });
 
-  if (error) return null;
+    data.forEach((row) => {
+      const home = abbrMap[row.home_team] || row.home_team?.toLowerCase();
+      const away = abbrMap[row.away_team] || row.away_team?.toLowerCase();
+      const winner = abbrMap[row.winner] || row.winner?.toLowerCase();
+
+      // Defensive: skip unknown teams
+      if (!home || !away) return;
+
+      if (winner) {
+        recs[winner].wins += 1;
+        const loser = winner === home ? away : home;
+        recs[loser].losses += 1;
+      } else {
+        // Tie: increment ties for both teams
+        recs[home].ties += 1;
+        recs[away].ties += 1;
+      }
+    });
+
+    // Convert to "W-L-T" strings
+    const formatted = {};
+    Object.entries(recs).forEach(([team, r]) => {
+      formatted[team] = `${r.wins}-${r.losses}${r.ties ? `-${r.ties}` : ""}`;
+    });
+
+    setTeamRecords(formatted);
+  }
+} catch (err) {
+  console.warn("Team records fetch error:", err);
+  setTeamRecords({});
+}
+
+    } catch (err) {
+      console.error("Error fetching scores or records:", err);
+      setError("Unable to load scores or records. Try again later.");
+      setTeamRecords({});
+      setScores([]);
+    }
+  };
+
+  fetchScoresAndRecords();
+  const interval = setInterval(fetchScoresAndRecords, 60000); // refresh every minute
+  return () => clearInterval(interval);
+}, [week]);
+
 
   // --- Scrolling helpers ---
   const getVisibleCards = () => {
+    if (typeof window === "undefined") return 3;
     if (window.innerWidth < 640) return 2; // mobile
     if (window.innerWidth < 1024) return 3; // tablet
     return 7; // desktop
@@ -140,6 +243,10 @@ export default function Scoreboard({ collapsed }) {
       behavior: "smooth",
     });
   };
+
+  // don't return null on error — render fallback UI instead
+  // if you want to short-circuit the whole scoreboard: you can uncomment the next line
+  // if (error) return <div className="p-2 text-sm text-red-600">{error}</div>;
 
   return (
     <div
@@ -214,54 +321,101 @@ export default function Scoreboard({ collapsed }) {
           className="flex overflow-x-auto scrollbar-hide flex-1 p-2 rounded snap-x snap-mandatory"
           style={{ backgroundColor: "#fff", gap: "4px" }}
         >
-          {scores.map((game, idx) => {
-            const comp = game.competitions?.[0]?.competitors;
-            if (!comp) return null;
-            const home = comp.find((t) => t.homeAway === "home");
-            const away = comp.find((t) => t.homeAway === "away");
+          {scores?.length ? (
+            scores.map((game, idx) => {
+              const comp = game.competitions?.[0]?.competitors;
+              if (!comp) return null;
+              const home = comp.find((t) => t.homeAway === "home");
+              const away = comp.find((t) => t.homeAway === "away");
 
-            return (
-              <div
-                key={game.id}
-                className={`score-card snap-start h-full flex flex-col items-center justify-center px-3 py-1 bg-white w-[120px] flex-shrink-0 leading-tight ${
-                  idx !== scores.length - 1 ? "border-r border-gray-300" : ""
-                }`}
-              >
-                <span className="text-[11px] text-gray-500 mb-1 truncate">
-                  {game.status?.type?.shortDetail}
-                </span>
-                <div className="flex flex-col text-xs w-full">
-                  <div className="flex justify-between items-center pb-0.5">
-                    <div className="flex items-center space-x-1">
-                      {/* Away team logo */}
-                      <img
-                        src={getTeamLogo(away?.team?.abbreviation)}
-                        alt={away?.team?.abbreviation}
-                        className="w-4 h-4 object-contain"
-                        onError={(e) => { e.currentTarget.src = FALLBACK_LOGO; }}
-                      />
-                      <span className="font-bold">{away?.team?.abbreviation}</span>
-                    </div>
-                    {away?.score && <span>{away.score}</span>}
-                  </div>
+              // Determine if we should show score or pre-game record
+              const showScore =
+                game.status?.type?.completed || game.status?.type?.state === "in";
 
-                  <div className="flex justify-between items-center pt-0.5">
-                    <div className="flex items-center space-x-1">
-                      {/* Home team logo */}
-                      <img
-                        src={getTeamLogo(home?.team?.abbreviation)}
-                        alt={home?.team?.abbreviation}
-                        className="w-4 h-4 object-contain"
-                        onError={(e) => { e.currentTarget.src = FALLBACK_LOGO; }}
-                      />
-                      <span className="font-bold">{home?.team?.abbreviation}</span>
-                    </div>
-                    {home?.score && <span>{home.score}</span>}
-                  </div>
+              return (
+                <div
+                  key={game.id}
+                  className={`score-card snap-start h-full flex flex-col items-center justify-center px-3 py-1 bg-white w-[120px] flex-shrink-0 leading-tight ${
+                    idx !== scores.length - 1 ? "border-r border-gray-300" : ""
+                  }`}
+                >
+                  {/* Game status (time, final, etc.) */}
+                  <span className="text-[11px] text-gray-500 mb-1 truncate">
+                    {game.status?.type?.shortDetail || "Pre-game"}
+                  </span>
+{/* Teams and scores/records */}
+<div className="flex flex-col text-xs w-full">
+  {/* Away Team */}
+  <div className="flex justify-between items-center pb-0.5">
+    <div className="flex items-center space-x-1">
+      <img
+        src={getTeamLogo(away?.team?.abbreviation)}
+        alt={away?.team?.abbreviation}
+        className="w-4 h-4 object-contain"
+        onError={(e) => { e.currentTarget.src = FALLBACK_LOGO; }}
+      />
+      <span className="font-bold">{away?.team?.abbreviation}</span>
+    </div>
+
+    <div className="flex items-center space-x-1">
+      {/* Pre-game record */}
+      {teamRecords[away?.team?.abbreviation.toLowerCase()] && (
+        <span
+          className={`text-gray-400 text-xs transition-all duration-300 ${
+            showScore ? "mr-1" : ""
+          }`}
+        >
+          {teamRecords[away?.team?.abbreviation.toLowerCase()]}
+        </span>
+      )}
+
+      {/* Score */}
+      {showScore && (
+        <span className="font-bold">{away?.score ?? "-"}</span>
+      )}
+    </div>
+  </div>
+
+  {/* Home Team */}
+  <div className="flex justify-between items-center pt-0.5">
+    <div className="flex items-center space-x-1">
+      <img
+        src={getTeamLogo(home?.team?.abbreviation)}
+        alt={home?.team?.abbreviation}
+        className="w-4 h-4 object-contain"
+        onError={(e) => { e.currentTarget.src = FALLBACK_LOGO; }}
+      />
+      <span className="font-bold">{home?.team?.abbreviation}</span>
+    </div>
+
+    <div className="flex items-center space-x-1">
+      {/* Pre-game record */}
+      {teamRecords[home?.team?.abbreviation.toLowerCase()] && (
+        <span
+          className={`text-gray-400 text-xs transition-all duration-300 ${
+            showScore ? "mr-1" : ""
+          }`}
+        >
+          {teamRecords[home?.team?.abbreviation.toLowerCase()]}
+        </span>
+      )}
+
+      {/* Score */}
+      {showScore && (
+        <span className="font-bold">{home?.score ?? "-"}</span>
+      )}
+    </div>
+  </div>
+</div>
+
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="w-full text-center py-4 text-sm text-gray-500">
+              {error ? "Error loading scores." : "Loading scores..."}
+            </div>
+          )}
         </div>
 
         {/* Right arrow */}
