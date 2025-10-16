@@ -15,7 +15,9 @@ export default function HomePage({ user }) {
 
   // Fetch latest report
   useEffect(() => {
-    const fetchReport = async () => {
+  const fetchReport = async () => {
+    setError(null);
+    try {
       const { data, error } = await supabase
         .from("wednesday_reports")
         .select("*")
@@ -23,19 +25,25 @@ export default function HomePage({ user }) {
         .limit(1)
         .single();
 
-      if (error) setError("Failed to load Wednesday Report");
-      else {
-        const logoPath = `${import.meta.env.BASE_URL}images/pickem-logo.png`;
-        const processedContent = data.content.replace(
-          /<img[^>]*>/g,
-          `<img src="${logoPath}" alt="JW Pickem Logo" class="mx-auto my-4 w-32 sm:w-40 md:w-48 lg:w-56" />`
-        );
-        setReport({ ...data, content: processedContent });
-      }
-    };
+      if (error) throw error;
 
-    fetchReport();
-  }, []);
+      // ✅ Optional: Adjust image paths for base URL (only if needed)
+      const base = import.meta.env.BASE_URL;
+      const processedContent = data.content.replaceAll(
+        '/logos/',
+        `${base}logos/`
+      );
+
+      setReport({ ...data, content: processedContent });
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load Wednesday Report");
+    }
+  };
+
+  fetchReport();
+}, []);
+
 
   const previewComments = comments.slice(0, 3);
 
