@@ -87,6 +87,7 @@ const isFirstSubmitGame = (game) => {
   "Mexico",
   "Brazil",
   "Sao Paulo",
+  "Madrid",
 ].some((loc) => (game.location || "").includes(loc));
 
 };
@@ -175,7 +176,7 @@ const isEarlyIntlSunday = day === "Sun" && hourET < 12;
 
 // Tag label for UI clarity
 if (isEarlyIntlSunday) {
-  day = "Sun Intnl (08:30 Canada)";
+  day = "Sun Intnl - Madrid (08:30 Canada)";
 }
 
 
