@@ -38,31 +38,39 @@ function determineCorrectSpread(homeTeam, awayTeam, homeScore, awayScore, gameId
 }
 
 async function upsertGameResult(game) {
-  const { week, gameId, homeTeam, awayTeam, winner, dbTeam, correctSpreadTeam, homeScore, awayScore } = game;
+  const { week, gameId } = game;
 
-  try {
-    const { error } = await supabase
-      .from('game_results')
-      .upsert({
-        week,
-        game_id: gameId,
-        home_team: homeTeam,
-        away_team: awayTeam,
-        winner,
-        db_team: dbTeam,
-        correct_spread: correctSpreadTeam,
-        home_score: homeScore,
-        away_score: awayScore,
-        created_at: new Date().toISOString()
-      }, { onConflict: ['week', 'game_id'] });
+  // fetch current row to preserve manual DB/PS values
+  const { data: existing } = await supabase
+    .from('game_results')
+    .select('db_team, correct_spread')
+    .eq('week', week)
+    .eq('game_id', gameId)
+    .single();
 
-    if (error) throw error;
-
-    console.log(`Updated game ${gameId}: ${homeTeam} vs ${awayTeam}`);
-  } catch (err) {
-    console.error(`Error upserting game ${gameId}:`, err);
+  if (existing) {
+    if (!game.dbTeam) game.dbTeam = existing.db_team;
+    if (!game.correctSpreadTeam) game.correctSpreadTeam = existing.correct_spread;
   }
+
+  const { error } = await supabase
+    .from('game_results')
+    .upsert({
+      week: game.week,
+      game_id: game.gameId,
+      home_team: game.homeTeam,
+      away_team: game.awayTeam,
+      winner: game.winner,
+      db_team: game.dbTeam,
+      correct_spread: game.correctSpreadTeam,
+      home_score: game.homeScore,
+      away_score: game.awayScore,
+      created_at: new Date().toISOString(),
+    }, { onConflict: ['week', 'game_id'] });
+
+  if (error) console.error(error);
 }
+
 
 async function syncWeek(week) {
   console.log(`Syncing week ${week} from ESPN...`);
