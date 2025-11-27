@@ -25,7 +25,7 @@ export const driveByGames = {
 };
 
 export const pointSpreads = {
-  "401772694": [3.5]  
+  "401772694": [-3.5]  
   // "Green Bay -2.5 (Home)" and "Detroit +2.5 (Away)" in your dropdown automatically
   // Home gets minus ------ Away gets plus when entering positive no.
   // To reverse it put in a negative no.
