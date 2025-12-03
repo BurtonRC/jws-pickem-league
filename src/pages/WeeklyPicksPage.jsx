@@ -699,7 +699,12 @@ if (!games || !games.length) {
         "New York Giants": "NY Giants",
         "New York Jets": "NY Jets",
         "New Orleans Saints": "New Orleans",
-        "Las Vegas Raiders" : "Las Vegas"
+        "Las Vegas Raiders" : "Las Vegas",
+        "Cincinnati Bengals" : "Cincinnati",
+        "Atlanta Falcons" : "Atlanta",
+        "Pittsburgh Steelers" : "Pittsburgh",
+        "Chicago Bears" : "Chicago",
+        "Arizona Cardinals" : "Arizona"
         // add all other teams as needed
       };
       return mapping[dbTeam] || dbTeam.split(" ")[0]; // fallback
