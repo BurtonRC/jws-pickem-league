@@ -6,6 +6,7 @@ export default function SurvivorPage() {
   const [survivorData, setSurvivorData] = useState({});
   const [maxWeek, setMaxWeek] = useState(1);
   const [teamLogos, setTeamLogos] = useState({});
+  const WINNER_ICON = "logos/winner.png";
 
   // ✅ Load team logos from public/teamLogos.json
   useEffect(() => {
@@ -60,6 +61,13 @@ export default function SurvivorPage() {
     );
   }
 
+  // Determine survivor winner(s): players with NO losses
+const winners = Object.keys(survivorData).filter((user) => {
+  const weeks = survivorData[user];
+  return Object.values(weeks).every((p) => p.result === "win");
+});
+
+
   return (
     <div className="min-h-screen bg-gray-50 px-4 sm:px-6 pt-6">
   <div className="w-full max-w-5xl mx-auto space-y-4">
@@ -88,7 +96,12 @@ export default function SurvivorPage() {
               let eliminated = false;
 
               return (
-                <tr key={user} className="border-b border-gray-300">
+                <tr
+                  key={user}
+                  className={`border-b border-gray-300 ${
+                    winners.includes(user) ? "bg-[#efe4b1]" : ""
+                  }`}
+                >
                   <td className="p-2 font-semibold text-center sticky left-0 bg-white z-10">
                     {user}
                   </td>
@@ -108,13 +121,18 @@ export default function SurvivorPage() {
 
                     return (
                       <td key={weekNum} className="p-2 text-center">
-                        {logo ? (
+                        {/* Winner special icon on final winning week */}
+                        {winners.includes(user) && weekNum === Object.keys(picks).length ? (
+                          <img
+                            src={`${import.meta.env.BASE_URL}${WINNER_ICON}`}
+                            alt="Winner"
+                            className="w-10 h-10 mx-auto"
+                          />
+                        ) : logo ? (
                           <img
                             src={`${import.meta.env.BASE_URL}${logo}`}
                             alt={team}
-                            className={`w-10 h-10 mx-auto ${
-                              isDimmed ? "opacity-20" : ""
-                            }`}
+                            className={`w-10 h-10 mx-auto ${isDimmed ? "opacity-20" : ""}`}
                           />
                         ) : (
                           team || ""
