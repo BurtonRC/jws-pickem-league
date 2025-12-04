@@ -102,9 +102,16 @@ const winners = Object.keys(survivorData).filter((user) => {
                     winners.includes(user) ? "bg-[#efe4b1]" : ""
                   }`}
                 >
-                  <td className="p-2 font-semibold text-center sticky left-0 bg-white z-10">
+                  <td
+                    className={`p-2 font-semibold text-center sticky left-0 z-10 ${
+                      winners.includes(user)
+                        ? "bg-[#dfcd79]"
+                        : "bg-white"
+                    }`}
+                  >
                     {user}
                   </td>
+
                   {Array.from({ length: maxWeek }, (_, i) => {
                     const weekNum = i + 1;
                     const pick = picks[weekNum];
