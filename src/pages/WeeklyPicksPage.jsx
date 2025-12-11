@@ -25,7 +25,7 @@ function ConfirmationModal({ isOpen, message, onClose }) {
 }
 
 // Upload New Week from ESPN
-export const manualWeekNumber = 14; // <-- manually set the week you want
+export const manualWeekNumber = 15; // <-- manually set the week you want
 
 export default function WeeklyPicksPage() {
   
@@ -817,7 +817,7 @@ if (!games || !games.length) {
   });
 })()}
 
-{/* ===== SURVIVOR ROW - DESKTOP ===== */}
+{/* ===== SURVIVOR ROW - DESKTOP ===== 
 {!survivorLost && (
 <tr className="bg-gray-50">
   <td colSpan={4} className="p-3 font-semibold">
@@ -851,7 +851,7 @@ if (!games || !games.length) {
     </select>
   </td>
 </tr>
-)}
+)}*/}
 
 
 {/* ===== SUBMIT SECOND BUTTON ROW ===== */}
@@ -948,7 +948,7 @@ if (!games || !games.length) {
     );
   })}
 
-{/* Survivor Pick Card / Mobile */}
+{/* Survivor Pick Card / Mobile 
 {!survivorLost && (
   <div className="bg-white p-3 rounded shadow mb-4">
     <div className="font-semibold">Survivor Pick:</div>
@@ -978,7 +978,7 @@ if (!games || !games.length) {
       })}
     </select>
   </div>
-)}
+)}*/}
 
 
   {/* Submit Rest of Picks card */}
