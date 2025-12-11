@@ -7,6 +7,8 @@ export default function SurvivorPage() {
   const [maxWeek, setMaxWeek] = useState(1);
   const [teamLogos, setTeamLogos] = useState({});
   const WINNER_ICON = "logos/winner.png";
+  const FINAL_SURVIVOR_WEEK = 13;
+
 
   // ✅ Load team logos from public/teamLogos.json
   useEffect(() => {
@@ -45,7 +47,9 @@ export default function SurvivorPage() {
       });
 
       setSurvivorData(grouped);
-      setMaxWeek(maxWeekFound);
+      // setMaxWeek(maxWeekFound);
+      setMaxWeek(FINAL_SURVIVOR_WEEK);
+
     };
 
     fetchSurvivorData();
@@ -61,11 +65,20 @@ export default function SurvivorPage() {
     );
   }
 
-  // Determine survivor winner(s): players with NO losses
+  /* Determine survivor winner(s): players with NO losses
 const winners = Object.keys(survivorData).filter((user) => {
   const weeks = survivorData[user];
   return Object.values(weeks).every((p) => p.result === "win");
+}); */
+const winners = Object.keys(survivorData).filter((user) => {
+  const weeks = survivorData[user];
+  for (let w = 1; w <= FINAL_SURVIVOR_WEEK; w++) {
+    const p = weeks[w];
+    if (!p || p.result !== "win") return false;
+  }
+  return true;
 });
+
 
 
   return (
@@ -129,7 +142,7 @@ const winners = Object.keys(survivorData).filter((user) => {
                     return (
                       <td key={weekNum} className="p-2 text-center">
                         {/* Winner special icon on final winning week */}
-                        {winners.includes(user) && weekNum === Object.keys(picks).length ? (
+                        {winners.includes(user) && weekNum === FINAL_SURVIVOR_WEEK ? (
                           <img
                             src={`${import.meta.env.BASE_URL}${WINNER_ICON}`}
                             alt="Winner"
