@@ -79,6 +79,7 @@ const winners = Object.keys(survivorData).filter((user) => {
   return true;
 });
 
+console.log("WINNERS:", winners);
 
 
   return (
