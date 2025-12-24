@@ -25,7 +25,7 @@ function ConfirmationModal({ isOpen, message, onClose }) {
 }
 
 // Upload New Week from ESPN
-export const manualWeekNumber = 16; // <-- manually set the week you want
+export const manualWeekNumber = 17; // <-- manually set the week you want
 
 export default function WeeklyPicksPage() {
   
@@ -526,7 +526,7 @@ const loadExistingPicks = async () => {
           .select("picks, point_spreads, dbs, survivor_pick")
           .eq("user_id", user.id)
           .eq("week", weekNum)
-          .single();
+          .maybeSingle();
 
         if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
