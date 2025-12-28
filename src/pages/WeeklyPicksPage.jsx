@@ -66,56 +66,59 @@ export default function WeeklyPicksPage() {
   // Track Drive-By (DB) picks separately
   const [DBs, setDBs] = useState({});
 
+  // One-off: lock specific game(s) in the second submit
+  const secondSubmitLockedGames = ["401772953"]; // <-- use the game ID(s) to lock
+
   // Helper: determine if a game is in the first submit group (Thu–Sat + early international)
-const isFirstSubmitGame = (game) => {
-  // 1. Always Thu / Fri / Sat
-  if (["Thu", "Fri", "Sat"].includes(game.day)) return true;
+  const isFirstSubmitGame = (game) => {
+    // 1. Always Thu / Fri / Sat
+    if (["Thu", "Fri", "Sat"].includes(game.day)) return true;
 
-  // 2. Include early international games (before 12:00 ET)
-  const kickoff = new Date(game.kickoffUTC || game.kickoff);
-  const hourET = (kickoff.getUTCHours() - 4 + 24) % 24; // UTC → Eastern
-  if (hourET < 12) return true;
+    // 2. Include early international games (before 12:00 ET)
+    const kickoff = new Date(game.kickoffUTC || game.kickoff);
+    const hourET = (kickoff.getUTCHours() - 4 + 24) % 24; // UTC → Eastern
+    if (hourET < 12) return true;
 
-  // 3. Fallback for known locations
-  return [
-  "London",
-  "Germany",
-  "Frankfurt",
-  "Tottenham",
-  "Wembley",
-  "Munich",
-  "Mexico",
-  "Brazil",
-  "Sao Paulo",
-  "Madrid",
-].some((loc) => (game.location || "").includes(loc));
+    // 3. Fallback for known locations
+    return [
+    "London",
+    "Germany",
+    "Frankfurt",
+    "Tottenham",
+    "Wembley",
+    "Munich",
+    "Mexico",
+    "Brazil",
+    "Sao Paulo",
+    "Madrid",
+  ].some((loc) => (game.location || "").includes(loc));
 
-};
+  };
 
 
   // Helper: check if a game's kickoff has already passed
-const hasGameStarted = (game) => {
-  if (!game.date) return false; // fallback if no date
-  return new Date(game.date) < new Date(); // true if in the past
-};
+  const hasGameStarted = (game) => {
+    if (!game.date) return false; // fallback if no date
+    return new Date(game.date) < new Date(); // true if in the past
+  };
 
-// Map of previously picked teams (won) for the survivor dropdown
-const previousPickMap = useMemo(() => {
-  const map = {};
-  if (!survivorPicks || !currentWeek) return map;
+  // Map of previously picked teams (won) for the survivor dropdown
+  const previousPickMap = useMemo(() => {
+    const map = {};
+    if (!survivorPicks || !currentWeek) return map;
 
-  survivorPicks
-    .filter(
-      (pick) =>
-        pick.week < currentWeek.weekNumber &&
-        pick.result?.toLowerCase() === "win"
-    )
-    .forEach((pick) => {
-      map[pick.team.trim().toLowerCase()] = true;
-    });
+    survivorPicks
+      .filter(
+        (pick) =>
+          pick.week < currentWeek.weekNumber &&
+          pick.result?.toLowerCase() === "win"
+      )
+      .forEach((pick) => {
+        map[pick.team.trim().toLowerCase()] = true;
+      });
 
-  return map;
-}, [survivorPicks, currentWeek]);
+    return map;
+  }, [survivorPicks, currentWeek]);
 
 
   // TEMP: Log game IDs for leagueConfig
@@ -294,6 +297,9 @@ const secondKickoff = useMemo(() => {
   return new Date(Math.min(...secondGames.map(g => new Date(g.kickoffUTC).getTime())));
 }, [games]);
 
+// Override switch for time differences with late Saturday games
+const OVERRIDE_SECOND_SUBMIT = true; // ← set to false next week
+
 // ------------------------------
 // Countdown effect (timers for first & second submit groups)
 // ------------------------------
@@ -308,8 +314,13 @@ useEffect(() => {
     const update = () => {
       const diff = kickoff - new Date();
       if (diff <= 0) {
-        setStr("Kickoff reached!");
-      } else {
+  setStr(
+    OVERRIDE_SECOND_SUBMIT && setStr === setTimeSecond
+      ? "Picks will lock at 1:00 PM EST"
+      : "Kickoff reached!"
+  );
+}
+ else {
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -784,9 +795,17 @@ if (!games || !games.length) {
               className={`border rounded p-1 w-full ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
               value={selectedTeams[game.id] || ""}
               onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
-              disabled={locked}
+              disabled={
+              locked || 
+              (!isFirstSubmitGame(game) && secondSubmitLockedGames.includes(String(game.id)))
+            }
             >
-              <option value="">-- Select Team --</option>
+              <option value="">
+  {!isFirstSubmitGame(game) && secondSubmitLockedGames.includes(String(game.id))
+    ? "Game locked"
+    : "-- Select Team --"}
+</option>
+
               {game.teams.map((team) => (
                 <option key={team} value={team}>{team}</option>
               ))}
@@ -921,9 +940,16 @@ if (!games || !games.length) {
             className={`border rounded p-1 w-full mt-2 ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
             value={selectedTeams[game.id] || ""}
             onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
-            disabled={locked}
+            disabled={
+              locked || 
+              (!isFirstSubmitGame(game) && secondSubmitLockedGames.includes(String(game.id)))
+            }
           >
-            <option value="">-- Select Team --</option>
+            <option value="">
+              {!isFirstSubmitGame(game) && secondSubmitLockedGames.includes(String(game.id))
+                ? "Game locked"
+                : "-- Select Team --"}
+            </option>
             {game.teams.map((team) => (
               <option key={team} value={team}>{team}</option>
             ))}
