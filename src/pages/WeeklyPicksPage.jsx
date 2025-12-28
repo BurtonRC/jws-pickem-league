@@ -298,7 +298,7 @@ const secondKickoff = useMemo(() => {
 }, [games]);
 
 // Override switch for time differences with late Saturday games
-const OVERRIDE_SECOND_SUBMIT = true; // ← set to false next week
+const OVERRIDE_SECOND_SUBMIT = false; // ← set to false next week
 
 // ------------------------------
 // Countdown effect (timers for first & second submit groups)
