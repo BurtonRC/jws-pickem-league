@@ -33,7 +33,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false, user, setM
     { to: null, label: "Boards", authRequired: true, submenu: [
       { to: "/leaderboard", label: "Leaderboard" },
       { to: "/survivor", label: "Survivor" },
-      { to: "/picks-board", label: "User's Picks" }
+      //{ to: "/picks-board", label: "User's Picks" }
     ]},
     { to: "/wednesday-reports", label: "Wed Reports", authRequired: true },
     { to: "/payments", label: "Payments", authRequired: true },
