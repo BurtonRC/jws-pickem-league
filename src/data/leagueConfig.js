@@ -1,7 +1,7 @@
 // data/leagueConfig.js
 export const driveByGames = { 
 
-"401772964": "Cincinnati Bengals",
+"401772964": "Cleveland Browns",
 "401772968": "Green Bay Packers",
 "401772970": "Tennessee Titans",
 "401772962": "Indianapolis Colts",
