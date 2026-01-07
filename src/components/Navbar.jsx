@@ -31,7 +31,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false, user, setM
     //{ to: "/picks", label: "Weekly Picks", authRequired: true },
     // Boards is the parent, not a link itself
     { to: null, label: "Boards", authRequired: true, submenu: [
-      //{ to: "/leaderboard", label: "Leaderboard" },
+      { to: "/leaderboard", label: "Leaderboard" },
       { to: "/survivor", label: "Survivor" },
       //{ to: "/picks-board", label: "User's Picks" }
     ]},
