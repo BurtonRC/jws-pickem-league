@@ -3,7 +3,7 @@ import { supabase } from "../supabaseClient";
 import PageHeader from "@/components/PageHeader";
 
 export default function LeaderboardPage() {
-  const CURRENT_SEASON = 2099;
+  const CURRENT_SEASON = 2026;
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
