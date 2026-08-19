@@ -3,7 +3,7 @@ import Navbar from "./Navbar";
 import Scoreboard from "./Scoreboard";
 import { supabase } from "../supabaseClient"; // import your Supabase client
 
-export default function MainLayout({ children, loggedIn, onLogout, user }) {
+export default function MainLayout({ children, loggedIn, onLogout, user, isAdmin }) {
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState(null); // store Supabase profile
@@ -54,6 +54,7 @@ export default function MainLayout({ children, loggedIn, onLogout, user }) {
           user={profile} // pass fetched profile to Navbar
           menuOpen={menuOpen}
           setMenuOpen={setMenuOpen}
+          isAdmin={isAdmin}
         />
       </div>
 

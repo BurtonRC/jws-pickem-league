@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 
-export default function Navbar({ loggedIn, onLogout, minimal = false, user, setMenuOpen, menuOpen }) {
+export default function Navbar({ loggedIn, onLogout, minimal = false, user, setMenuOpen, menuOpen, isAdmin }) {
   // Convert username to initials
   const initials = user?.username
     ?.split(" ")
@@ -28,16 +28,17 @@ export default function Navbar({ loggedIn, onLogout, minimal = false, user, setM
   // Links array for DRY rendering
   const links = [
     { to: "/home", label: "Home", authRequired: false },
-    //{ to: "/picks", label: "Weekly Picks", authRequired: true },
+    { to: "/picks", label: "Weekly Picks", authRequired: true },
     // Boards is the parent, not a link itself
     { to: null, label: "Boards", authRequired: true, submenu: [
       { to: "/leaderboard", label: "Leaderboard" },
       { to: "/survivor", label: "Survivor" },
-      //{ to: "/picks-board", label: "User's Picks" }
+      { to: "/picks-board", label: "User's Picks" }
     ]},
     { to: "/wednesday-reports", label: "Wed Reports", authRequired: true },
     { to: "/payments", label: "Payments", authRequired: true },
     { to: "/comments", label: "Comments", authRequired: true },
+    { to: "/admin", label: "Admin", authRequired: true, adminOnly: true },
     { to: "/login", label: "Login", authRequired: false, hideIfLoggedIn: true },
     { to: "/signup", label: "Sign Up", authRequired: false, hideIfLoggedIn: true },
   ];
@@ -64,6 +65,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false, user, setM
             <div className="hidden md:flex items-center ml-6 flex-shrink overflow-hidden nav-link-small relative">
               {links.map((link, index) => {
                 if (link.authRequired && !loggedIn) return null;
+                if (link.adminOnly && !isAdmin) return null;
                 if (link.hideIfLoggedIn && loggedIn) return null;
 
                 // If the link has a submenu
@@ -193,6 +195,7 @@ if (link.submenu) {
           <div className="max-w-[70%] mx-auto px-4 py-2 space-y-2">
             {links.map((link) => {
               if (link.authRequired && !loggedIn) return null;
+              if (link.adminOnly && !isAdmin) return null;
               if (link.hideIfLoggedIn && loggedIn) return null;
 
               if (link.submenu) {

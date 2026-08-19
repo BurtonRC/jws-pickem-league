@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import WarningModal from "../components/WarningModal";
-import * as leagueConfig from "../data/leagueConfig";
 import PageHeader from "@/components/PageHeader";
 
 /** Local confirmation modal (keeps your WarningModal for warnings only) */
@@ -25,7 +24,8 @@ function ConfirmationModal({ isOpen, message, onClose }) {
 }
 
 // Upload New Week from ESPN
-export const manualWeekNumber = 18; // <-- manually set the week you want
+export const manualSeason = 2026;
+export const manualWeekNumber = 1; // <-- manually set the week you want
 
 export default function WeeklyPicksPage() {
   
@@ -103,22 +103,24 @@ export default function WeeklyPicksPage() {
   };
 
   // Map of previously picked teams (won) for the survivor dropdown
-  const previousPickMap = useMemo(() => {
-    const map = {};
-    if (!survivorPicks || !currentWeek) return map;
+const previousPickMap = useMemo(() => {
+  const map = {};
 
-    survivorPicks
-      .filter(
-        (pick) =>
-          pick.week < currentWeek.weekNumber &&
-          pick.result?.toLowerCase() === "win"
-      )
-      .forEach((pick) => {
-        map[pick.team.trim().toLowerCase()] = true;
-      });
+  if (!survivorPicks || !currentWeek) return map;
 
-    return map;
-  }, [survivorPicks, currentWeek]);
+  survivorPicks
+    .filter(
+      (pick) =>
+        pick.season === manualSeason &&
+        pick.week < currentWeek.weekNumber &&
+        pick.team
+    )
+    .forEach((pick) => {
+      map[pick.team.trim().toLowerCase()] = true;
+    });
+
+  return map;
+}, [survivorPicks, currentWeek]);
 
 
   // TEMP: Log game IDs for leagueConfig
@@ -127,7 +129,7 @@ export default function WeeklyPicksPage() {
     try {
       // Use the manualWeekNumber you already set
       const res = await fetch(
-        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${manualWeekNumber}`
+        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?year=${manualSeason}&seasontype=2&week=${manualWeekNumber}`
       );
       const data = await res.json();
 
@@ -152,82 +154,209 @@ export default function WeeklyPicksPage() {
 
 useEffect(() => {
   const fetchWeekGames = async () => {
-    console.log("Fetching schedule for manual week:", manualWeekNumber);
+    console.log(
+      "Fetching schedule:",
+      "season:",
+      manualSeason,
+      "week:",
+      manualWeekNumber
+    );
 
     try {
-      // ---- Fetch live ESPN scoreboard for the manual week ----
-      const year = new Date().getFullYear();
+      // ---- Fetch current-season ESPN schedule ----
       const resWeek = await fetch(
-        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?year=${year}&seasontype=2&week=${manualWeekNumber}`
+        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?year=${manualSeason}&seasontype=2&week=${manualWeekNumber}`
       );
+
+      if (!resWeek.ok) {
+        throw new Error(`ESPN returned ${resWeek.status}`);
+      }
+
       const weekData = await resWeek.json();
 
-
-      console.log("ESPN raw events:", weekData.events, "Manual week:", manualWeekNumber);
-
-      // Map ESPN games into your expected structure
+      // Map ESPN games. ESPN supplies the current betting favorite
+      // in competition.odds[].awayTeamOdds/homeTeamOdds.
       const weekGames = (weekData.events || []).map((game) => {
-        const matchup = game.name.split(" at ");
+        const competition = game.competitions?.[0];
+        const competitors = competition?.competitors || [];
+
+        const home = competitors.find(
+          (team) => team.homeAway === "home"
+        );
+        const away = competitors.find(
+          (team) => team.homeAway === "away"
+        );
+
+        const homeTeam =
+          home?.team?.displayName || "";
+        const awayTeam =
+          away?.team?.displayName || "";
+
+        const matchup = [awayTeam, homeTeam];
+
+        const odds = competition?.odds?.[0];
+
+        let favoriteTeam = "";
+
+        if (odds?.awayTeamOdds?.favorite) {
+          favoriteTeam = awayTeam;
+        } else if (odds?.homeTeamOdds?.favorite) {
+          favoriteTeam = homeTeam;
+        } else if (odds?.details) {
+          // Fallback: ESPN's details are normally in the form "TEAM -3.5".
+          const details = String(odds.details);
+          const awayAbbreviation =
+            away?.team?.abbreviation || "";
+          const homeAbbreviation =
+            home?.team?.abbreviation || "";
+
+          if (
+            awayAbbreviation &&
+            details.startsWith(`${awayAbbreviation} `)
+          ) {
+            favoriteTeam = awayTeam;
+          } else if (
+            homeAbbreviation &&
+            details.startsWith(`${homeAbbreviation} `)
+          ) {
+            favoriteTeam = homeTeam;
+          }
+        }
+
         const kickoffUTC = new Date(game.date);
 
-        // Compute the day label
-let day = kickoffUTC.toLocaleString("en-US", { weekday: "short" });
+        let day = kickoffUTC.toLocaleString("en-US", {
+          weekday: "short",
+        });
 
-// Detect international early games (Sunday before 12 PM ET)
-const hourET = (kickoffUTC.getUTCHours() - 4 + 24) % 24; // UTC → Eastern
-const isEarlyIntlSunday = day === "Sun" && hourET < 12;
+        const hourET =
+          (kickoffUTC.getUTCHours() - 4 + 24) % 24;
 
-// Tag label for UI clarity
-if (isEarlyIntlSunday) {
-  day = "Sun Intnl - Madrid (08:30 Canada)";
-}
+        const isEarlyIntlSunday =
+          day === "Sun" && hourET < 12;
 
+        if (isEarlyIntlSunday) {
+          day = "Sun Intnl";
+        }
 
         return {
-          id: game.id,
+          id: String(game.id),
           teams: matchup,
-          dbTeam: "",       
-          dbLabel: "",      
-          pointSpread: [],  
-          day,              
-          kickoffUTC: kickoffUTC.toISOString(), 
+          dbTeam: "",
+          dbLabel: "",
+          favoriteTeam,
+          pointSpread: [],
+          day,
+          kickoffUTC: kickoffUTC.toISOString(),
         };
       });
 
-      // Overlay DB teams and point spreads as before
+      console.log(
+        "ESPN games found:",
+        weekGames.length,
+        weekGames
+      );
+
+      // ---- Get this season's league configuration ----
+      const gameIds = weekGames.map((game) => Number(game.id));
+
+      let configData = [];
+
+      if (gameIds.length > 0) {
+        const { data, error } = await supabase
+          .from("league_game_config")
+          .select(
+            "season, week, game_id, drive_by_enabled, drive_by_team, ps_game_of_week, ps_team, spread"
+          )
+          .eq("season", manualSeason)
+          .eq("week", manualWeekNumber)
+          .in("game_id", gameIds);
+
+        if (error) throw error;
+
+        configData = data || [];
+      }
+
+      console.log(
+        "League config found:",
+        configData.length,
+        configData
+      );
+
+      // Make lookup by ESPN game ID
+      const configMap = {};
+
+      configData.forEach((config) => {
+        configMap[String(config.game_id)] = config;
+      });
+
+      // Overlay league configuration onto ESPN games
       const mappedGames = weekGames.map((game) => {
-        const gameIdStr = String(game.id);
-        const dbTeam = leagueConfig.driveByGames[gameIdStr] || "";
-        const dbLabel = dbTeam ? "DB" : "";
-        const ps = leagueConfig.pointSpreads[gameIdStr] || [];
+        const config = configMap[String(game.id)];
+
+        const dbTeam =
+          config?.drive_by_enabled
+            ? config.drive_by_team || ""
+            : "";
+
+        const pointSpread =
+          config?.ps_game_of_week &&
+          config.ps_team &&
+          config.spread !== null
+            ? [Number(config.spread)]
+            : [];
+
+        const psTeam =
+          config?.ps_game_of_week
+          ? config.ps_team || ""
+          : "";
 
         return {
           ...game,
           dbTeam,
-          dbLabel,
-          pointSpread: ps,
+          dbLabel: dbTeam ? "DB" : "",
+          psTeam,
+          pointSpread,
         };
       });
 
-      // Sort games: first-submit group (Thu–Sat + early internationals) first
-const sortedGames = [
-  ...mappedGames
-    .filter(isFirstSubmitGame)
-    .sort((a, b) => new Date(a.kickoffUTC) - new Date(b.kickoffUTC)),
-  ...mappedGames
-    .filter(g => !isFirstSubmitGame(g))
-    .sort((a, b) => new Date(a.kickoffUTC) - new Date(b.kickoffUTC))
-];
+      // Sort first-submit games first
+      const sortedGames = [
+        ...mappedGames
+          .filter(isFirstSubmitGame)
+          .sort(
+            (a, b) =>
+              new Date(a.kickoffUTC) -
+              new Date(b.kickoffUTC)
+          ),
 
+        ...mappedGames
+          .filter((g) => !isFirstSubmitGame(g))
+          .sort(
+            (a, b) =>
+              new Date(a.kickoffUTC) -
+              new Date(b.kickoffUTC)
+          ),
+      ];
 
-      setCurrentWeek({ weekNumber: manualWeekNumber });
+      setCurrentWeek({
+        weekNumber: manualWeekNumber,
+      });
+
       setGames(sortedGames);
-      setAllTeams(
-        Array.from(new Set(sortedGames.flatMap((game) => game.teams)))
-      );
 
+      setAllTeams(
+        Array.from(
+          new Set(
+            sortedGames.flatMap((game) => game.teams)
+          )
+        )
+      );
     } catch (err) {
-      console.error("Failed to fetch/load NFL schedule:", err);
+      console.error(
+        "Failed to fetch/load NFL schedule:",
+        err
+      );
     }
   };
 
@@ -265,7 +394,8 @@ useEffect(() => {
     const { data, error } = await supabase
       .from("survivor_picks")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("season", manualSeason);
 
     if (error) {
       console.error("Error fetching survivor picks:", error);
@@ -396,9 +526,59 @@ console.log("Second locked?", secondLocked);
     }));
   };
 
-  const handlePointSpreadChange = (id, value) => {
-    setPointSpreadSelection((prev) => ({ ...prev, [id]: value }));
-  };
+const handlePointSpreadChange = (id, value) => {
+  setPointSpreadSelection((prev) => ({
+    ...prev,
+    [id]: value,
+  }));
+
+  if (!value) {
+    setSelectedTeams((prev) => ({
+      ...prev,
+      [id]: "",
+    }));
+    return;
+  }
+
+  // The PS option value is stored as:
+  // "Team Name | -2" or "Team Name | +2"
+  const selectedTeam = value.split(" | ")[0];
+
+  // Selecting a point-spread side automatically selects
+  // the same team in the normal Team dropdown.
+  setSelectedTeams((prev) => ({
+    ...prev,
+    [id]: selectedTeam,
+  }));
+
+  // Keep the Drive-By state consistent with the selected team.
+  // If the PS choice is the DB team, DB stays/on becomes active.
+  // If the PS choice is the other team, DB is turned off.
+  const selectedGame = games.find(
+    (game) => String(game.id) === String(id)
+  );
+
+  if (selectedGame) {
+    const isDBTeam = selectedTeam === selectedGame.dbTeam;
+
+    setSliderOn((prev) => ({
+      ...prev,
+      [id]: isDBTeam,
+    }));
+
+    setDBs((prev) => {
+      const next = { ...prev };
+
+      if (isDBTeam && selectedGame.dbTeam) {
+        next[id] = selectedGame.dbTeam;
+      } else {
+        delete next[id];
+      }
+
+      return next;
+    });
+  }
+};
 
   // Validation functions
   const validateFirst = () => {
@@ -472,13 +652,46 @@ const loadExistingPicks = async () => {
       .from("weekly_picks")
       .select("picks, point_spreads, dbs")
       .eq("user_id", user.id)
+      .eq("season", manualSeason)
       .eq("week", weekNum)
       .maybeSingle(); // <-- safe if row missing
 
     if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
     setSelectedTeams(existingData?.picks || {});
-    setPointSpreadSelection(existingData?.point_spreads || {});
+
+    // Keep previously saved PS values compatible with the current
+    // "Team | Spread" option format.
+    const savedPointSpreads = existingData?.point_spreads || {};
+    const normalizedPointSpreads = {};
+
+    Object.entries(savedPointSpreads).forEach(([gameId, value]) => {
+      const game = games.find(
+        (g) => String(g.id) === String(gameId)
+      );
+
+      if (!game || !value) {
+        normalizedPointSpreads[gameId] = value;
+        return;
+      }
+
+      const stringValue = String(value);
+
+      if (stringValue.includes(" | ")) {
+        normalizedPointSpreads[gameId] = stringValue;
+        return;
+      }
+
+      const matchingTeam = game.teams.find(
+        (team) => stringValue.startsWith(`${team} `)
+      );
+
+      normalizedPointSpreads[gameId] = matchingTeam
+        ? `${matchingTeam} | ${stringValue.slice(matchingTeam.length).trim()}`
+        : stringValue;
+    });
+
+    setPointSpreadSelection(normalizedPointSpreads);
     setDBs(existingData?.dbs || {});
 
     // Fetch survivor pick
@@ -486,6 +699,7 @@ const loadExistingPicks = async () => {
       .from("survivor_picks")
       .select("team")
       .eq("user_id", user.id)
+      .eq("season", manualSeason)
       .eq("week", weekNum)
       .maybeSingle();
 
@@ -500,6 +714,7 @@ const loadExistingPicks = async () => {
       .from("survivor_status")
       .select("eliminated")
       .eq("user_id", user.id)
+      .eq("season", manualSeason)
       .maybeSingle();
 
     setSurvivorLost(statusData?.eliminated || false); // <-- this sets the lost state
@@ -523,7 +738,7 @@ const loadExistingPicks = async () => {
 
 
     // ---- Save picks to Supabase (merge first and second submit) ----
-    const saveToSupabase = async () => {
+    const saveToSupabase = async (includeSurvivor = false) => {
       try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError) throw userError;
@@ -536,6 +751,7 @@ const loadExistingPicks = async () => {
           .from("weekly_picks")
           .select("picks, point_spreads, dbs, survivor_pick")
           .eq("user_id", user.id)
+          .eq("season", manualSeason)
           .eq("week", weekNum)
           .maybeSingle();
 
@@ -546,7 +762,9 @@ const loadExistingPicks = async () => {
         const mergedPicks = { ...(existingData?.picks || {}), ...selectedTeams };
         const mergedPointSpreads = { ...(existingData?.point_spreads || {}), ...pointSpreadSelection };
         const mergedDBs = { ...(existingData?.dbs || {}), ...DBs };
-        const mergedSurvivor = survivorPick || existingData?.survivor_pick || null; // <-- must come before upsert
+        const mergedSurvivor = includeSurvivor
+          ? survivorPick || existingData?.survivor_pick || null
+          : existingData?.survivor_pick || null; // <-- must come before upsert
 
 
         // Upsert into weekly_picks
@@ -555,13 +773,16 @@ const loadExistingPicks = async () => {
           .upsert(
             [{
               user_id: user.id,
+              season: manualSeason,
               week: weekNum,
               picks: mergedPicks,
               point_spreads: mergedPointSpreads,
               dbs: mergedDBs,
-              survivor_pick: mergedSurvivor
+              survivor_pick: includeSurvivor
+                ? mergedSurvivor
+                : existingData?.survivor_pick || null
             }],
-            { onConflict: ["user_id", "week"] }
+            { onConflict: "user_id,season,week" }
           )
           .select();
 
@@ -570,12 +791,17 @@ const loadExistingPicks = async () => {
         
 
         // Also update survivor_picks table (optional)
-        if (!survivorLost && survivorPick) {
+        if (includeSurvivor && !survivorLost && survivorPick) {
           const { data: survivorData, error: survivorError } = await supabase
             .from("survivor_picks")
             .upsert(
-              [{ user_id: user.id, week: weekNum, team: survivorPick }],
-              { onConflict: ["user_id", "week"] }
+              [{
+                user_id: user.id,
+                season: manualSeason,
+                week: weekNum,
+                team: survivorPick,
+              }],
+              { onConflict: "user_id,season,week" }
             )
             .select();
           if (survivorError) throw survivorError;
@@ -644,7 +870,7 @@ const onSubmitSecond = async () => {
   }
 
   try {
-    await saveToSupabase(); // Use central save function
+    await saveToSupabase(true); // Use central save function
 
 // 2️⃣ Get logged-in user
     const { data: { user } } = await supabase.auth.getUser();
@@ -722,12 +948,65 @@ if (!games || !games.length) {
     };
 
 
+const getPointSpreadOptions = (game) => {
+  const configuredSpread = Number(
+    game.pointSpread?.[0]
+  );
+
+  if (!Number.isFinite(configuredSpread)) {
+    return [];
+  }
+
+  const psTeam = game.psTeam;
+
+  if (!psTeam) {
+    return [];
+  }
+
+  const otherTeam = game.teams.find(
+    (team) => team !== psTeam
+  );
+
+  if (!otherTeam) {
+    return [];
+  }
+
+  const amount = Math.abs(configuredSpread);
+
+  const psLabel =
+    configuredSpread > 0
+      ? `+${amount}`
+      : configuredSpread < 0
+      ? `-${amount}`
+      : "0";
+
+  const oppositeSpread =
+    configuredSpread > 0
+      ? `-${amount}`
+      : configuredSpread < 0
+      ? `+${amount}`
+      : "0";
+
+  return [
+    {
+      value: `${psTeam} | ${psLabel}`,
+      label: `${psTeam} ${psLabel}`,
+      team: psTeam,
+    },
+    {
+      value: `${otherTeam} | ${oppositeSpread}`,
+      label: `${otherTeam} ${oppositeSpread}`,
+      team: otherTeam,
+    },
+  ];
+};
+
   // ---- UI ----
   return (
     <div className="min-h-screen bg-gray-50 px-6 pt-6">
       <div className="w-full max-w-5xl mx-auto space-y-4">
         <PageHeader>
-          Weekly Picks Wk {currentWeek.weekNumber}
+          {manualSeason} &nbsp;&nbsp; Week {currentWeek.weekNumber}
         </PageHeader>
 
         {/* ===== DESKTOP TABLE ===== */}
@@ -769,21 +1048,31 @@ if (!games || !games.length) {
           <td className="p-3">
             {game.pointSpread?.length > 0 && (
               <select
-                className={`border rounded p-1 w-full ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
+                className={`border rounded p-1 w-full ${
+                  pointSpreadSelection[game.id]
+                    ? "bg-yellow-200"
+                    : ""
+                }`}
                 value={pointSpreadSelection[game.id] || ""}
-                onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
+                onChange={(e) =>
+                  handlePointSpreadChange(
+                    game.id,
+                    e.target.value
+                  )
+                }
                 disabled={locked}
               >
-                <option value="">-- Disruptor Point Spread --</option>
-                {game.pointSpread.map((ps, psIdx) => (
-                  <React.Fragment key={psIdx}>
-                    <option value={`${game.teams[0]} ${ps >= 0 ? "+" : ""}${ps}`}>
-                      {game.teams[0]} {ps >= 0 ? "+" : ""}{ps}
-                    </option>
-                    <option value={`${game.teams[1]} ${ps <= 0 ? "+" : ""}${-ps}`}>
-                      {game.teams[1]} {ps <= 0 ? "+" : ""}{-ps}
-                    </option>
-                  </React.Fragment>
+                <option value="">
+                  -- Disruptor Point Spread --
+                </option>
+
+                {getPointSpreadOptions(game).map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
                 ))}
               </select>
             )}
@@ -792,19 +1081,22 @@ if (!games || !games.length) {
           {/* Team selection */}
           <td className="p-3">
             <select
-              className={`border rounded p-1 w-full ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
+              className={`border rounded p-1 w-full ${
+                selectedTeams[game.id] ? "bg-yellow-200" : ""
+              } `}
               value={selectedTeams[game.id] || ""}
               onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
               disabled={
-              locked || 
-              (!isFirstSubmitGame(game) && secondSubmitLockedGames.includes(String(game.id)))
-            }
+                locked ||
+                (!isFirstSubmitGame(game) &&
+                  secondSubmitLockedGames.includes(String(game.id)))
+              }
             >
               <option value="">
-  {!isFirstSubmitGame(game) && secondSubmitLockedGames.includes(String(game.id))
-    ? "Game locked"
-    : "-- Select Team --"}
-</option>
+                {!isFirstSubmitGame(game) && secondSubmitLockedGames.includes(String(game.id))
+                  ? "Game locked"
+                  : "-- Select Team --"}
+              </option>
 
               {game.teams.map((team) => (
                 <option key={team} value={team}>{team}</option>
@@ -836,7 +1128,7 @@ if (!games || !games.length) {
   });
 })()}
 
-{/* ===== SURVIVOR ROW - DESKTOP ===== 
+{/* ===== SURVIVOR ROW - DESKTOP ===== */}
 {!survivorLost && (
 <tr className="bg-gray-50">
   <td colSpan={4} className="p-3 font-semibold">
@@ -870,7 +1162,7 @@ if (!games || !games.length) {
     </select>
   </td>
 </tr>
-)}*/}
+)}
 
 
 {/* ===== SUBMIT SECOND BUTTON ROW ===== */}
@@ -916,33 +1208,46 @@ if (!games || !games.length) {
           {/* Point Spread select */}
           {game.pointSpread?.length > 0 && (
             <select
-              className={`border rounded p-1 w-full mt-2 ${pointSpreadSelection[game.id] ? "bg-yellow-200" : ""}`}
+              className={`border rounded p-1 w-full mt-2 ${
+                pointSpreadSelection[game.id]
+                  ? "bg-yellow-200"
+                  : ""
+              }`}
               value={pointSpreadSelection[game.id] || ""}
-              onChange={(e) => handlePointSpreadChange(game.id, e.target.value)}
+              onChange={(e) =>
+                handlePointSpreadChange(
+                  game.id,
+                  e.target.value
+                )
+              }
               disabled={locked}
             >
-              <option value="">-- Select Point Spread --</option>
-              {game.pointSpread.map((ps, psIdx) => (
-                <React.Fragment key={psIdx}>
-                  <option value={`${game.teams[0]} ${ps >= 0 ? "+" : ""}${ps}`}>
-                    {game.teams[0]} {ps >= 0 ? "+" : ""}{ps}
-                  </option>
-                  <option value={`${game.teams[1]} ${ps <= 0 ? "+" : ""}${-ps}`}>
-                    {game.teams[1]} {ps <= 0 ? "+" : ""}{-ps}
-                  </option>
-                </React.Fragment>
+              <option value="">
+                -- Disruptor Point Spread --
+              </option>
+
+              {getPointSpreadOptions(game).map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
               ))}
             </select>
           )}
 
           {/* Team selection */}
           <select
-            className={`border rounded p-1 w-full mt-2 ${selectedTeams[game.id] ? "bg-yellow-200" : ""}`}
+            className={`border rounded p-1 w-full mt-2 ${
+              selectedTeams[game.id] ? "bg-yellow-200" : ""
+            } `}
             value={selectedTeams[game.id] || ""}
             onChange={(e) => handleSelectChange(game.id, e.target.value, game.dbTeam)}
             disabled={
-              locked || 
-              (!isFirstSubmitGame(game) && secondSubmitLockedGames.includes(String(game.id)))
+              locked ||
+              (!isFirstSubmitGame(game) &&
+                secondSubmitLockedGames.includes(String(game.id)))
             }
           >
             <option value="">
@@ -974,7 +1279,7 @@ if (!games || !games.length) {
     );
   })}
 
-{/* Survivor Pick Card / Mobile 
+{/* Survivor Pick Card / Mobile */} 
 {!survivorLost && (
   <div className="bg-white p-3 rounded shadow mb-4">
     <div className="font-semibold">Survivor Pick:</div>
@@ -1004,7 +1309,7 @@ if (!games || !games.length) {
       })}
     </select>
   </div>
-)}*/}
+)}
 
 
   {/* Submit Rest of Picks card */}

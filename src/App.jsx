@@ -5,6 +5,10 @@ import { supabase } from './supabaseClient';
 import { manualWeekNumber } from "./pages/WeeklyPicksPage";
 import { CommentsProvider } from "./context/CommentsContext";
 
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminWeeklySetupPage from "./pages/AdminWeeklySetupPage";
+import AdminLayout from "./components/AdminLayout";
+import AdminWednesdayReportPage from "./pages/AdminWednesdayReportPage";
 import MainLayout from './components/MainLayout';
 import HomePage from './pages/HomePage';
 import WeeklyPicksPage from './pages/WeeklyPicksPage';
@@ -22,6 +26,8 @@ import ScrollToTop from "./components/ScrollToTop";
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminCheckComplete, setAdminCheckComplete] = useState(false);
 
   useEffect(() => {
     // Check session on load
@@ -30,20 +36,49 @@ export default function App() {
     });
 
     // Listen for auth changes (login/logout)
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
 
     return () => {
-      if (listener?.subscription) listener.subscription.unsubscribe();
+      if (listener?.subscription) {
+        listener.subscription.unsubscribe();
+      }
     };
   }, []);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user?.id) {
+        setIsAdmin(false);
+        setAdminCheckComplete(true);
+        return;
+      }
+
+      setAdminCheckComplete(false);
+
+      const { data, error } = await supabase.rpc("is_app_admin");
+
+      if (error) {
+        console.error("Admin status check failed:", error);
+        setIsAdmin(false);
+      } else {
+        setIsAdmin(Boolean(data));
+      }
+
+      setAdminCheckComplete(true);
+    };
+
+    checkAdminStatus();
+  }, [user]);
 
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
     } catch (err) {
-      console.error('Sign out error', err);
+      console.error("Sign out error", err);
     }
   };
 
@@ -68,7 +103,7 @@ export default function App() {
           path="/home"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user} isAdmin={isAdmin}>
                 <HomePage user={user} />  {/* Pass user here */}
               </MainLayout>
             ) : (
@@ -81,7 +116,7 @@ export default function App() {
           path="/picks"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user} isAdmin={isAdmin}>
                 <WeeklyPicksPage />
               </MainLayout>
             ) : (
@@ -93,7 +128,7 @@ export default function App() {
           path="/leaderboard"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user} isAdmin={isAdmin}>
                 <LeaderboardPage />
               </MainLayout>
             ) : (
@@ -105,7 +140,7 @@ export default function App() {
           path="/survivor"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user} isAdmin={isAdmin}>
                 <SurvivorPage />
               </MainLayout>
             ) : (
@@ -117,7 +152,7 @@ export default function App() {
           path="/wednesday-reports"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user} isAdmin={isAdmin}>
                 <WednesdayReportsPage />
               </MainLayout>
             ) : (
@@ -129,7 +164,7 @@ export default function App() {
           path="/payments"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user} isAdmin={isAdmin}>
                 <PaymentsPage />
               </MainLayout>
             ) : (
@@ -141,7 +176,7 @@ export default function App() {
           path="/picks-board"
           element={
             user ? (
-              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user} isAdmin={isAdmin}>
                 <PicksBoard weekNumber={manualWeekNumber} />
               </MainLayout>
             ) : (
@@ -158,7 +193,7 @@ export default function App() {
   path="/comments"
   element={
     user ? (
-      <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user}>
+      <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user} isAdmin={isAdmin}>
         <CommentsPage user={user} />  {/* Pass user here */}
       </MainLayout>
     ) : (
@@ -169,6 +204,63 @@ export default function App() {
 
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/update-password" element={<UpdatePassword />} />
+
+        <Route
+          path="/admin"
+          element={
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : !adminCheckComplete ? (
+              <div className="min-h-screen flex items-center justify-center">
+                Checking access...
+              </div>
+            ) : isAdmin ? (
+              <AdminLayout>
+                <AdminDashboard />
+              </AdminLayout>
+            ) : (
+              <Navigate to="/home" replace />
+            )
+          }
+        />
+
+        <Route
+            path="/admin/wednesday-report"
+            element={
+              !user ? (
+                <Navigate to="/login" replace />
+              ) : !adminCheckComplete ? (
+                <div className="min-h-screen flex items-center justify-center">
+                  Checking access...
+                </div>
+              ) : isAdmin ? (
+                <AdminLayout>
+                  <AdminWednesdayReportPage />
+                </AdminLayout>
+              ) : (
+                <Navigate to="/home" replace />
+              )
+            }
+          />
+
+        <Route
+          path="/admin/week-setup"
+          element={
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : !adminCheckComplete ? (
+              <div className="min-h-screen flex items-center justify-center">
+                Checking access...
+              </div>
+            ) : isAdmin ? (
+              <AdminLayout>
+                <AdminWeeklySetupPage />
+              </AdminLayout>
+            ) : (
+              <Navigate to="/home" replace />
+            )
+          }
+        />
 
         {/* Catch-all redirect */}
         <Route

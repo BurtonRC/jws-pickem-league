@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import PageHeader from "@/components/PageHeader";
 
 export default function LeaderboardPage() {
+  const CURRENT_SEASON = 2099;
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
@@ -12,7 +13,8 @@ export default function LeaderboardPage() {
         .from("weekly_results")
         .select(
           "user_id, username, week, prev_week_score, this_week_score, overall_score, total_drive_bys, total_point_spreads"
-        );
+        )
+        .eq("season", CURRENT_SEASON);
 
       if (error) {
         console.error("Error fetching leaderboard:", error);
@@ -22,8 +24,9 @@ export default function LeaderboardPage() {
       // ✅ Group by username (latest week only)
       const grouped = {};
       rows.forEach((row) => {
-        if (!grouped[row.username] || row.week > grouped[row.username].week) {
-          grouped[row.username] = {
+        if (!grouped[row.user_id] || row.week > grouped[row.user_id].week) {
+          grouped[row.user_id] = {
+            user_id: row.user_id,
             username: row.username,
             prevWeek: row.prev_week_score ?? 0,
             thisWeek: row.this_week_score ?? 0,
@@ -83,7 +86,7 @@ export default function LeaderboardPage() {
 
               return (
                 <tr
-                  key={user.username}
+                  key={user.user_id}
                   className={`${bgColor} border-b hover:bg-gray-200 transition-colors duration-200`}
                 >
                   <td className="p-2 sm:p-3 text-left truncate">{user.username}</td>
