@@ -30,7 +30,7 @@ export default function ForgotPassword() {
       <img
         src={`${import.meta.env.BASE_URL}images/pickem-logo.png`}
         alt="Logo"
-        className="h-30 mb-8"
+        className="h-[180px] mb-8"
       />
       <form
         onSubmit={handleForgotPassword}

@@ -12,6 +12,7 @@ export default function Login() {
   const [showReset, setShowReset] = useState(false);
   const [rememberMe, setRememberMe] = useState(false); // remember me checkbox
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
 
   const logoPath = `${import.meta.env.BASE_URL}images/pickem-logo.png`;
 
@@ -128,15 +129,24 @@ export default function Login() {
               className="w-full p-2 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
 
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full p-2 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full p-2 pr-16 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
 
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-blue-600 hover:underline"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
             {/* Remember Me */}
             <div className="flex items-center">
               <input
@@ -158,15 +168,14 @@ export default function Login() {
               Log In
             </button>
 
-            {/* <p className="text-sm text-center mt-2">
-              <button
-                type="button"
-                onClick={() => setShowReset(true)}
+            <p className="text-sm text-center mt-2">
+              <Link
+                to="/forgot-password"
                 className="text-blue-600 hover:underline"
               >
                 Forgot Password?
-              </button>
-            </p> */}
+              </Link>
+            </p>
 
             <p className="text-sm text-center">
               Don't have an account?{" "}
