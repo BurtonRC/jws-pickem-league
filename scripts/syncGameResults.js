@@ -251,10 +251,11 @@ async function syncWeek(season, week) {
   );
 
   if (completedCount === 0) {
-    throw new Error(
-      `No completed games found for ${season} Week ${week}.`
-    );
-  }
+  console.log(
+    `No completed games found for ${season} Week ${week}.`
+  );
+  return;
+}
 
   // -------------------------------------------------------
   // COMPUTE WEEKLY RESULTS
