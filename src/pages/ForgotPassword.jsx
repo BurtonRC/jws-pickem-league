@@ -1,6 +1,8 @@
 // src/pages/ForgotPassword.jsx
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -54,6 +56,12 @@ export default function ForgotPassword() {
         >
           Send Reset Email
         </button>
+        <p className="text-sm text-center">
+          Back to{" "}
+          <Link to="/login" className="text-blue-600 hover:underline">
+            Login
+          </Link>
+        </p>
       </form>
     </div>
   );

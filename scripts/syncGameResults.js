@@ -41,8 +41,8 @@ if (!Number.isInteger(SEASON) || !Number.isInteger(WEEK)) {
 
 async function fetchWeekEvents(season, week) {
   const url =
-    `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` +
-    `?year=${season}&seasontype=2&week=${week}`;
+  `https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` +
+  `?year=${season}&seasontype=2&week=${week}`;
 
   console.log(
     `Fetching ESPN results for ${season} Week ${week}...`

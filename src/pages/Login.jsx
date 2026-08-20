@@ -168,6 +168,13 @@ export default function Login() {
               Log In
             </button>
 
+            <p className="text-sm text-center">
+              Don't have an account?{" "}
+              <Link to="/signup" className="text-blue-600 hover:underline">
+                Sign Up
+              </Link>
+            </p>
+
             <p className="text-sm text-center mt-2">
               <Link
                 to="/forgot-password"
@@ -177,12 +184,6 @@ export default function Login() {
               </Link>
             </p>
 
-            <p className="text-sm text-center">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-blue-600 hover:underline">
-                Sign Up
-              </Link>
-            </p>
           </form>
         ) : (
           // --- Forgot Password Form ---

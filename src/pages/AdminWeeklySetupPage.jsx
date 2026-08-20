@@ -25,7 +25,7 @@ export default function AdminPage() {
 
     try {
       const url =
-        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` +
+        `https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` +
         `?dates=${selectedSeason}&seasontype=2&week=${selectedWeek}`;
 
       console.log(
