@@ -18,6 +18,9 @@
   "dependencies": {
     "@sendgrid/mail": "^8.1.5",
     "@supabase/supabase-js": "^2.57.3",
+    "@tiptap/extension-image": "^3.30.2",
+    "@tiptap/react": "^3.30.2",
+    "@tiptap/starter-kit": "^3.30.2",
     "axios": "^1.11.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",

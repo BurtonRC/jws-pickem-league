@@ -48,12 +48,75 @@ export default function HomePage({ user }) {
   const previewComments = comments.slice(0, 3);
 
   return (
-    <main className="w-full max-w-[100%] lg:max-w-[1024px] mx-auto px-[12px] lg:px-[40px] space-y-8">
-      {report && (
-        <section className="p-[15px] lg:p-[30px] bg-white rounded-2xl shadow w-full">
-          <h2 className="text-2xl font-bold mb-2">{report.title}</h2>
-          <p className="text-sm text-gray-500 mb-4">{report.report_date}</p>
-          <div dangerouslySetInnerHTML={{ __html: report.content }} />
+      <>
+          <style>{`
+        .wednesday-report-content p {
+          margin: 0 0 1rem 0;
+        }
+
+        .wednesday-report-content h2 {
+          font-size: 1.5rem;
+          line-height: 2rem;
+          font-weight: 700;
+          margin: 1.5rem 0 0.75rem 0;
+        }
+
+        .wednesday-report-content h3 {
+          font-size: 1.25rem;
+          line-height: 1.75rem;
+          font-weight: 600;
+          margin: 1.25rem 0 0.5rem 0;
+        }
+
+        .wednesday-report-content ul {
+          list-style-type: disc;
+          padding-left: 1.5rem;
+          margin: 0 0 1rem 0;
+        }
+
+        .wednesday-report-content ol {
+          list-style-type: decimal;
+          padding-left: 1.5rem;
+          margin: 0 0 1rem 0;
+        }
+
+        .wednesday-report-content li {
+          margin: 0.25rem 0;
+        }
+
+        .wednesday-report-content blockquote {
+          border-left: 4px solid #9ca3af;
+          padding-left: 1rem;
+          margin: 1rem 0;
+          color: #4b5563;
+          font-style: italic;
+        }
+
+        .wednesday-report-content a {
+          color: #2563eb;
+          text-decoration: underline;
+        }
+
+        .wednesday-report-content strong {
+          font-weight: 700;
+        }
+
+        .wednesday-report-content em {
+          font-style: italic;
+        }
+      `}</style>
+    
+            <main className="w-full max-w-[100%] lg:max-w-[1024px] mx-auto px-[12px] lg:px-[40px] space-y-8">
+            {report && (
+              <section className="p-[15px] lg:p-[30px] bg-white rounded-2xl shadow w-full">
+                <h2 className="text-2xl font-bold mb-2">{report.title}</h2>
+                <p className="text-sm text-gray-500 mb-4">{report.report_date}</p>
+                <div
+        className="wednesday-report-content"
+        dangerouslySetInnerHTML={{
+          __html: report.content,
+        }}
+      />
           <Link
             to="/wednesday-reports"
             className="text-blue-600 hover:underline mt-4 block"
@@ -93,5 +156,6 @@ export default function HomePage({ user }) {
         </section>
       )}
     </main>
+    </>
   );
 }

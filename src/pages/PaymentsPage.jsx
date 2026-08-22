@@ -11,44 +11,13 @@ export default function DynamicPaymentPage() {
     EUR: "https://buy.stripe.com/6oU28j5iLeeN5Roehtb7y03",
   };
 
-  const [rates, setRates] = useState({ USD: null, EUR: null });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    async function fetchRates() {
-      try {
-        const res = await fetch(
-          "https://api.frankfurter.app/latest?from=CAD&to=USD,EUR"
-        );
-        const data = await res.json();
-
-        if (data && data.rates) {
-          setRates({
-            USD: data.rates.USD,
-            EUR: data.rates.EUR,
-          });
-        } else {
-          setError("Failed to load exchange rates");
-        }
-      } catch (e) {
-        setError("Failed to load exchange rates");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchRates();
-  }, []);
 
   const copyEmailToClipboard = () => {
     navigator.clipboard.writeText(INTERAC_EMAIL);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  if (loading) return <p>Loading payment info...</p>;
-  if (error) return <p>Error: {error}</p>;
 
   // 👉 Manually set your USD and EUR entry fees
 const payments = [

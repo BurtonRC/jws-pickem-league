@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import PageHeader from "@/components/PageHeader";
 
-const CURRENT_SEASON = 2025;
+const CURRENT_SEASON = 2026;
 const WINNER_ICON = "logos/winner.png";
 const FINAL_SURVIVOR_WEEK = 13;
 

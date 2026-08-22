@@ -38,7 +38,7 @@ export default function Navbar({ loggedIn, onLogout, minimal = false, user, setM
     { to: "/wednesday-reports", label: "Wed Reports", authRequired: true },
     { to: "/payments", label: "Payments", authRequired: true },
     { to: "/comments", label: "Comments", authRequired: true },
-    { to: "/admin", label: "Admin", authRequired: true, adminOnly: true },
+    { to: "/admin", label: "Admin", authRequired: true, adminOnly: true, adminColor: true },
     { to: "/login", label: "Login", authRequired: false, hideIfLoggedIn: true },
     { to: "/signup", label: "Sign Up", authRequired: false, hideIfLoggedIn: true },
   ];
@@ -112,17 +112,19 @@ if (link.submenu) {
 
                 // Normal link
                 return (
-                  <NavLink
-                    key={index}
-                    to={link.to}
-                    className={({ isActive }) =>
-                      `${linkBase} ${hoverColorClass} ${isActive ? linkActive : ""}`
-                    }
-                    style={{ paddingTop: "17px", paddingBottom: "17px" }}
-                  >
-                    {link.label}
-                  </NavLink>
-                );
+                <NavLink
+                  key={index}
+                  to={link.to}
+                  className={({ isActive }) =>
+                    `${linkBase} ${hoverColorClass} ${
+                      link.adminColor ? "bg-[#74581e]" : ""
+                    } ${isActive ? linkActive : ""}`
+                  }
+                  style={{ paddingTop: "13px", paddingBottom: "13px" }}
+                >
+                  {link.label}
+                </NavLink>
+              );
               })}
             </div>
           )}
@@ -221,17 +223,25 @@ if (link.submenu) {
               }
 
               return (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `block py-2 ${hoverColorClass} ${isActive ? "text-[#f1f2f3]" : ""}`
-                  }
-                >
-                  {link.label}
-                </NavLink>
-              );
+// Normal link
+
+  <NavLink
+    key={link.to}
+    to={link.to}
+    onClick={() => setMenuOpen(false)}
+    className={({ isActive }) =>
+      `block py-2 ${hoverColorClass} ${
+        link.adminColor
+          ? "bg-[#74581e] text-white px-2"
+          : isActive
+          ? "text-[#f1f2f3]"
+          : ""
+      }`
+    }
+  >
+    {link.label}
+  </NavLink>
+);
             })}
 
             {/* Mobile logout */}

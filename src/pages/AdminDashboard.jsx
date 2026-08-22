@@ -1,13 +1,14 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import PageHeader from "@/components/PageHeader";
 
 export default function AdminDashboard() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">
+        <PageHeader>
           Administration
-        </h1>
+        </PageHeader>
 
         <p className="text-gray-600 mt-1">
           Manage the weekly JW Pick'em League operations.

@@ -9,6 +9,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminWeeklySetupPage from "./pages/AdminWeeklySetupPage";
 import AdminLayout from "./components/AdminLayout";
 import AdminWednesdayReportPage from "./pages/AdminWednesdayReportPage";
+import AdminProcessResultsPage from "./pages/AdminProcessResultsPage";
 import MainLayout from './components/MainLayout';
 import HomePage from './pages/HomePage';
 import WeeklyPicksPage from './pages/WeeklyPicksPage';
@@ -215,7 +216,11 @@ export default function App() {
                 Checking access...
               </div>
             ) : isAdmin ? (
-              <AdminLayout>
+              <AdminLayout
+                  loggedIn={!!user}
+                  onLogout={handleLogout}
+                  user={user}
+                >
                 <AdminDashboard />
               </AdminLayout>
             ) : (
@@ -234,7 +239,11 @@ export default function App() {
                   Checking access...
                 </div>
               ) : isAdmin ? (
-                <AdminLayout>
+                <AdminLayout
+                  loggedIn={!!user}
+                  onLogout={handleLogout}
+                  user={user}
+                >
                   <AdminWednesdayReportPage />
                 </AdminLayout>
               ) : (
@@ -253,7 +262,11 @@ export default function App() {
                 Checking access...
               </div>
             ) : isAdmin ? (
-              <AdminLayout>
+              <AdminLayout
+                  loggedIn={!!user}
+                  onLogout={handleLogout}
+                  user={user}
+                >
                 <AdminWeeklySetupPage />
               </AdminLayout>
             ) : (
@@ -262,6 +275,28 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/admin/process-results"
+          element={
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : !adminCheckComplete ? (
+              <div className="min-h-screen flex items-center justify-center">
+                Checking access...
+              </div>
+            ) : isAdmin ? (
+              <AdminLayout
+                  loggedIn={!!user}
+                  onLogout={handleLogout}
+                  user={user}
+                >
+                <AdminProcessResultsPage />
+              </AdminLayout>
+            ) : (
+              <Navigate to="/home" replace />
+            )
+          }
+        />
         {/* Catch-all redirect */}
         <Route
           path="*"

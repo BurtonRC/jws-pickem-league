@@ -2,13 +2,15 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import PageHeader from "@/components/PageHeader";
 
+const CURRENT_SEASON = 2026;
+
 /**
  * Fetch games from ESPN for a given week and map to simple matchup objects.
  */
 async function fetchGamesForWeek(weekNumber) {
-  const year = new Date().getFullYear();
+  const year = CURRENT_SEASON;
   const res = await fetch(
-    `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?year=${year}&seasontype=2&week=${weekNumber}`
+    `https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?year=${year}&seasontype=2&week=${weekNumber}`
   );
   const data = await res.json();
 
@@ -31,9 +33,9 @@ async function fetchGamesForWeek(weekNumber) {
  * Fetch the *current* NFL week directly from ESPN API.
  */
 async function fetchCurrentWeek() {
-  const year = new Date().getFullYear();
+  const year = CURRENT_SEASON;
   const res = await fetch(
-    `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?year=${year}&seasontype=2`
+    `https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?year=${year}&seasontype=2`
   );
   const data = await res.json();
   return data.week?.number ?? 1; // fallback to 1 if missing
@@ -64,10 +66,11 @@ export default function PicksBoard() {
     const load = async () => {
       setLoading(true);
 
-      const { data: picksData, error } = await supabase
-        .from("weekly_picks")
-        .select("id, username, picks, survivor_pick, week")
-        .eq("week", selectedWeek);
+    const { data: picksData, error } = await supabase
+      .from("weekly_picks")
+      .select("id, username, picks, survivor_pick, week, season")
+      .eq("season", CURRENT_SEASON)
+      .eq("week", selectedWeek);
 
       if (error) {
         console.error("Error fetching picks:", error);

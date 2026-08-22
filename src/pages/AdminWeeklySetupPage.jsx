@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
+import PageHeader from "@/components/PageHeader";
 
 const DEFAULT_SEASON = 2026;
 
@@ -25,8 +26,8 @@ export default function AdminPage() {
 
     try {
       const url =
-        `https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` +
-        `?dates=${selectedSeason}&seasontype=2&week=${selectedWeek}`;
+      `https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` +
+      `?year=${season}&seasontype=2&week=${week}`;
 
       console.log(
         "ADMIN LOAD:",
@@ -427,9 +428,9 @@ const handlePSTeamChange = (gameId, value) => {
     <div className="max-w-6xl mx-auto space-y-6">
 
       <div>
-        <h1 className="text-3xl font-bold">
+        <PageHeader>
           Admin — Weekly Setup
-        </h1>
+        </PageHeader>
 
         <p className="text-gray-600 mt-1">
           Configure Drive-By and Point Spread
