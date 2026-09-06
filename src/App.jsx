@@ -17,6 +17,7 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import SurvivorPage from './pages/SurvivorPage';
 import WednesdayReportsPage from './pages/WednesdayReportsPage';
 import PaymentsPage from './pages/PaymentsPage';
+import LeagueRadarPage from './pages/LeagueRadarPage';
 import CommentsPage from "./pages/CommentsPage";
 import PicksBoard from "./pages/PicksBoard";
 import SignUp from './pages/SignUp';
@@ -131,6 +132,19 @@ export default function App() {
             user ? (
               <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user} isAdmin={isAdmin}>
                 <LeaderboardPage />
+              </MainLayout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        <Route
+          path="/league-radar"
+          element={
+            user ? (
+              <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user} isAdmin={isAdmin}>
+                <LeagueRadarPage user={user} />
               </MainLayout>
             ) : (
               <Navigate to="/login" replace />

@@ -65,3 +65,605 @@ nav {
 }
 
 
+.radar-shell {
+  width: 100%;
+  background: #02070b;
+  border: 1px solid #08708c;
+  border-radius: 5px;
+  padding: 22px;
+  box-sizing: border-box;
+}
+
+/* -------------------------------------------------------------
+   HEADER
+------------------------------------------------------------- */
+
+.radar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.radar-modal-header {
+  background: #062033;
+  color: #ffffff;
+  padding: 16px 22px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.18);
+}
+
+.radar-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.radar-modal-subtitle {
+  margin-top: 3px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.82);
+}
+
+.radar-modal-close {
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.radar-modal-body {
+  background: #075a70;
+  color: #ffffff;
+  padding: 24px;
+}
+
+.radar-player-modal {
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border-radius: 8px;
+  overflow-x: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+}
+
+.radar-tagline {
+  color: #9bdceb;
+  font-size: 17px;
+  letter-spacing: 3px;
+  white-space: nowrap;
+}
+
+.radar-archetypes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #9bdceb;
+  white-space: nowrap;
+}
+
+.radar-archetypes-title {
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
+.radar-archetypes-hint {
+  font-size: 12px;
+  color: #c3cbd0;
+}
+
+.radar-archetype-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23px;
+}
+
+/* -------------------------------------------------------------
+   MAIN GRID
+------------------------------------------------------------- */
+
+.radar-main-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) minmax(480px, 1.35fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.radar-right-column {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+
+/* -------------------------------------------------------------
+   PANELS
+------------------------------------------------------------- */
+
+.radar-panel {
+  background: #031827;
+  border: 1px solid #17455a;
+  border-radius: 5px;
+  color: #e8f0f4;
+  overflow: hidden;
+}
+
+.radar-profile-panel {
+  min-height: 450px;
+}
+
+.radar-panel-heading {
+  min-height: 62px;
+  padding: 11px 14px;
+  border-bottom: 1px solid #17455a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.radar-panel-title {
+  color: #f3f6f8;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.radar-panel-subtitle {
+  color: #718b98;
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.radar-panel-count {
+  color: #79cbdc;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.radar-panel-body {
+  padding: 10px;
+}
+
+/* -------------------------------------------------------------
+   PLAYER IDENTITY
+------------------------------------------------------------- */
+
+.radar-player-identity {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) 82px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid #17455a;
+  border-radius: 4px;
+}
+
+.radar-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #07859a;
+  border: 2px solid #3cc5d5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.radar-player-name {
+  font-size: 18px;
+  color: #f2f5f7;
+}
+
+.radar-player-archetype {
+  color: #35c6d8;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.radar-player-member {
+  color: #8297a2;
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.radar-rank-block {
+  border-left: 1px solid #35515e;
+  text-align: center;
+  padding-left: 12px;
+}
+
+.radar-rank-number {
+  color: #39d1e7;
+  font-size: 25px;
+}
+
+.radar-rank-label {
+  color: #84959d;
+  font-size: 10px;
+}
+
+/* -------------------------------------------------------------
+   STATS
+------------------------------------------------------------- */
+
+.radar-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin-top: 5px;
+  border: 1px solid #17455a;
+  border-radius: 4px;
+}
+
+.radar-stat {
+  padding: 10px 8px;
+  text-align: center;
+  border-right: 1px solid #35515e;
+}
+
+.radar-stat:last-child {
+  border-right: 0;
+}
+
+.radar-stat-label {
+  color: #8b9ba3;
+  font-size: 9px;
+}
+
+.radar-stat-value {
+  color: #f3f6f8;
+  font-size: 16px;
+  margin-top: 5px;
+}
+
+/* -------------------------------------------------------------
+   INSIGHTS
+------------------------------------------------------------- */
+
+.radar-subsection {
+  border: 1px solid #17455a;
+  border-radius: 4px;
+  margin-top: 5px;
+  padding: 11px;
+}
+
+.radar-subsection-title {
+  color: #f0f5f7;
+  font-size: 11px;
+  margin-bottom: 9px;
+}
+
+.radar-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #c4d1d7;
+  font-size: 10px;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.radar-insight:last-child {
+  margin-bottom: 0;
+}
+
+.radar-insight-icon {
+  color: #36c5d8;
+  font-size: 15px;
+  line-height: 12px;
+}
+
+/* -------------------------------------------------------------
+   HISTORY
+------------------------------------------------------------- */
+
+.radar-history-section {
+  min-height: 0;
+}
+
+.radar-subsection-heading-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.radar-history-count {
+  color: #778c96;
+  font-size: 9px;
+}
+
+.radar-history-scroll {
+  max-height: 155px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.radar-history-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px;
+  border-top: 1px solid #173b4b;
+}
+
+.radar-history-week {
+  color: #d9e4e8;
+  font-size: 10px;
+}
+
+.radar-history-detail {
+  color: #78909b;
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.radar-history-total {
+  color: #91a7b0;
+  font-size: 9px;
+}
+
+/* -------------------------------------------------------------
+   HIGHLIGHTS
+------------------------------------------------------------- */
+
+.radar-highlight-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 5px 8px;
+}
+
+.radar-highlight-row {
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr) 60px;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border-bottom: 1px solid #17455a;
+}
+
+.radar-highlight-row:last-child {
+  border-bottom: 0;
+}
+
+.radar-highlight-icon {
+  font-size: 17px;
+  text-align: center;
+}
+
+.radar-highlight-label {
+  color: #4bc4d7;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.radar-highlight-name {
+  color: #e7eef1;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.radar-highlight-description {
+  color: #8399a3;
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.radar-highlight-rank {
+  color: #b4c6cd;
+  font-size: 10px;
+  text-align: right;
+}
+
+/* -------------------------------------------------------------
+   EVERY PLAYER
+------------------------------------------------------------- */
+
+.radar-player-insight-panel {
+  min-height: 0;
+}
+
+.radar-player-scroll {
+  max-height: 185px;
+  overflow-y: auto;
+  padding: 0 8px;
+}
+
+.radar-player-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  border-bottom: 1px solid #17455a;
+  cursor: pointer;
+}
+
+.radar-player-row:hover {
+  background: #062435;
+}
+
+.radar-mini-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #176b86;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+}
+
+.radar-player-row-name {
+  color: #e5edf0;
+  font-size: 10px;
+}
+
+.radar-player-row-detail {
+  color: #80959f;
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.radar-player-row-result {
+  text-align: right;
+  color: #91a5ad;
+  font-size: 9px;
+}
+
+.radar-up {
+  color: #69d28a;
+  margin-top: 2px;
+}
+
+.radar-down {
+  color: #ff6969;
+  margin-top: 2px;
+}
+
+.radar-empty {
+  color: #7f949e;
+  font-size: 10px;
+  padding: 18px 8px;
+}
+
+/* -------------------------------------------------------------
+   SCROLLBARS
+------------------------------------------------------------- */
+
+.radar-shell ::-webkit-scrollbar {
+  width: 7px;
+}
+
+.radar-shell ::-webkit-scrollbar-track {
+  background: #07131b;
+}
+
+.radar-shell ::-webkit-scrollbar-thumb {
+  background: #718087;
+  border-radius: 8px;
+}
+
+.radar-shell ::-webkit-scrollbar-thumb:hover {
+  background: #91a3aa;
+}
+
+/* -------------------------------------------------------------
+   RESPONSIVE
+------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .radar-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .radar-right-column {
+    grid-template-rows: auto auto;
+  }
+
+  .radar-profile-panel {
+    min-height: auto;
+  }
+
+  .radar-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,0.68);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+}
+
+@media (max-width: 700px) {
+  .radar-shell {
+    padding: 12px;
+  }
+
+  .radar-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .radar-tagline {
+    white-space: normal;
+    font-size: 14px;
+    letter-spacing: 2px;
+  }
+
+  .radar-archetypes {
+    flex-wrap: wrap;
+  }
+
+  .radar-player-identity {
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+
+  .radar-rank-block {
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-top: 1px solid #35515e;
+    padding: 8px 0 0;
+  }
+
+  .radar-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .radar-stat:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .radar-stat:nth-child(n + 3) {
+    border-top: 1px solid #35515e;
+  }
+}
+
+@media (max-width: 600px) {
+  .radar-modal-overlay {
+    padding: 8px;
+    align-items: center;
+  }
+
+  .radar-player-modal {
+    width: 100%;
+    max-height: calc(100vh - 16px);
+  }
+
+  .radar-modal-body {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .radar-shell {
+    padding: 8px;
+  }
+
+  .radar-highlight-row {
+    grid-template-columns: 25px minmax(0, 1fr) 45px;
+  }
+
+  .radar-highlight-description {
+    font-size: 8px;
+  }
+
+  .radar-player-row {
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+  }
+}
