@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { supabase } from "@/supabaseClient";
 
@@ -116,7 +116,7 @@ function getProfileColor(userId) {
 }
 
 /* ============================================================
-   ARCHETYPE EDUCATION
+   RADAR GUIDE
    These descriptions are presentation content only.
    The qualification rules themselves remain in Radar.
 ============================================================ */
@@ -1931,7 +1931,7 @@ function ArchetypeIcon({
 }
 
 /* ============================================================
-   ARCHETYPE EDUCATION MODAL
+   RADAR GUIDE MODAL
 ============================================================ */
 
 function titleCaseArchetype(value) {
@@ -1951,6 +1951,28 @@ function getArchetypeByLabel(label) {
 }
 
 function ArchetypeModal({ archetype, onClose }) {
+  const guideContentRef = useRef(null);
+
+  useEffect(() => {
+    if (!archetype || !guideContentRef.current) return;
+
+    const target =
+      archetype === "ACHIEVEMENTS"
+        ? guideContentRef.current.querySelector(
+            '[data-guide-section="achievements"]'
+          )
+        : guideContentRef.current.querySelector(
+            `[data-guide-archetype="${archetype.key}"]`
+          );
+
+    if (target) {
+      target.scrollIntoView({
+        behavior: "auto",
+        block: "start",
+      });
+    }
+  }, [archetype]);
+
   if (!archetype) return null;
 
   return (
@@ -1959,6 +1981,7 @@ function ArchetypeModal({ archetype, onClose }) {
       onClick={onClose}
     >
       <div
+        ref={guideContentRef}
         className="
           relative
           w-full max-w-[760px]
@@ -1987,93 +2010,134 @@ function ArchetypeModal({ archetype, onClose }) {
           ×
         </button>
 
-        <div className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-[180px_1fr] sm:p-10">
 
-          {/* =====================================================
-              ARCHETYPE DISPLAY
-          ===================================================== */}
-          <div
-            className="
-              flex
-              min-h-[220px]
-              flex-col
-              items-center
-              justify-center
-              rounded-md
-              border-2
-              border-[#587589]
-              bg-[#001b2a]
-              px-4 py-5
-              shadow-inner
-            "
-          >
-            <img
-  src={archetype.image}
-  alt=""
-  className="h-28 w-28 object-contain sm:h-32 sm:w-32"
-/>
+        <div className="space-y-8 p-6 sm:p-10">
 
-            <div className="mt-4 text-center">
-              <div className="text-[15px] font-semibold leading-tight text-[#b2c7d8]">
-                THE
-              </div>
-
-              <div
-                className="mt-1 text-[23px] font-extrabold leading-tight"
-                style={{ color: archetype.color }}
-              >
-                {archetype.name}
-              </div>
-            </div>
+        {/* =====================================================
+            ACHIEVEMENTS
+        ===================================================== */}
+        <section data-guide-section="achievements">
+          <div className="text-[14px] font-bold tracking-wide text-[#102333] sm:text-[15px]">
+            LEAGUE ACHIEVEMENTS
           </div>
 
-          {/* =====================================================
-              EDUCATIONAL CONTENT
-          ===================================================== */}
-          <div className="min-w-0 text-[#102333]">
+          <div className="mt-4 space-y-4">
+            {ACHIEVEMENT_SHELF
+              .filter((achievement) =>
+                ACHIEVEMENT_INFO[achievement.type]
+              )
+              .map((achievement) => {
+                const info = ACHIEVEMENT_INFO[achievement.type];
 
-            <div className="pr-7 text-[14px] font-bold tracking-wide sm:text-[15px]">
-              LEAGUE ARCHETYPES
-              <span
-                className="ml-2"
-                style={{ color: archetype.color }}
-              >
-                {titleCaseArchetype(archetype.name)}
-              </span>
-            </div>
+                return (
+                  <div
+                    key={achievement.type}
+                    className="flex items-start gap-4 rounded-md border border-[#b5c4ce] bg-[#e8f0f5] p-3"
+                  >
+                    <img
+                      src={achievement.image}
+                      alt=""
+                      className="h-14 w-14 shrink-0 object-contain"
+                    />
 
-            <div className="mt-4">
-              <div className="text-[12px] font-bold">
-                Purpose
-              </div>
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-bold text-[#102333]">
+                        {achievement.type}
+                      </div>
 
-              <p className="mt-1 text-[12px] leading-[1.35]">
-                {archetype.purpose}
-              </p>
-            </div>
-
-            <div className="mt-4">
-              <div className="text-[12px] font-bold">
-                Qualification
-              </div>
-
-              <p className="mt-1 text-[12px] leading-[1.35]">
-                {archetype.qualification}
-              </p>
-            </div>
-
-            <div className="mt-4">
-              <div className="text-[12px] font-bold">
-                Operating rules
-              </div>
-
-              <p className="mt-1 text-[12px] leading-[1.35]">
-                {archetype.operating}
-              </p>
-            </div>
-
+                      <p className="mt-1 text-[12px] leading-[1.4] text-[#304654]">
+                        {info.description}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
-        </div>
+        </section>
+
+
+        {/* =====================================================
+            ARCHETYPES
+        ===================================================== */}
+        <section>
+          <div className="text-[14px] font-bold tracking-wide text-[#102333] sm:text-[15px]">
+            LEAGUE ARCHETYPES
+          </div>
+
+          <div className="mt-4 space-y-5">
+            {ARCHETYPES.map((item) => {
+              const selected =
+                archetype !== "ACHIEVEMENTS" &&
+                item.key === archetype.key;
+
+              return (
+                <div
+                  key={item.key}
+                  data-guide-archetype={item.key}
+                  className={`rounded-md border-2 p-4 ${
+                    selected
+                      ? "border-[#587589] bg-[#e3edf3]"
+                      : "border-[#c2cdd4] bg-[#f1f5f8]"
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center">
+                      <img
+                        src={item.image}
+                        alt=""
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+
+                    <div className="min-w-0">
+                      <div
+                        className="text-[16px] font-extrabold leading-tight"
+                        style={{ color: item.color }}
+                      >
+                        {item.name}
+                      </div>
+
+                      <div className="mt-3">
+                        <div className="text-[12px] font-bold text-[#102333]">
+                          Purpose
+                        </div>
+
+                        <p className="mt-1 text-[12px] leading-[1.4] text-[#304654]">
+                          {item.purpose}
+                        </p>
+                      </div>
+
+                      <div className="mt-3">
+                        <div className="text-[12px] font-bold text-[#102333]">
+                          Qualification
+                        </div>
+
+                        <p className="mt-1 text-[12px] leading-[1.4] text-[#304654]">
+                          {item.qualification}
+                        </p>
+                      </div>
+
+                      <div className="mt-3">
+                        <div className="text-[12px] font-bold text-[#102333]">
+                          Operating rules
+                        </div>
+
+                        <p className="mt-1 text-[12px] leading-[1.4] text-[#304654]">
+                          {item.operating}
+                        </p>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+      </div>
+
       </div>
     </div>
   );
@@ -2361,8 +2425,7 @@ export default function LeagueRadarPage() {
 }, [profileHistory]);
 
   const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [selectedArchetype, setSelectedArchetype] =
-    useState(null);
+  const [selectedArchetype, setSelectedArchetype] = useState(null);
   
     // TEMPORARY DEMO SWITCH — remove after the 2025 demonstration
   const DEMO_MODE = false;
@@ -2719,130 +2782,130 @@ export default function LeagueRadarPage() {
 
                 
                  {!profile ? (
-  <div className="flex min-h-0 flex-1 flex-col">
-    <div className="grid grid-cols-[56px_minmax(0,1fr)_70px] items-center gap-3 rounded-lg border border-[#164b60] bg-[#041d29] p-3 sm:grid-cols-[64px_minmax(0,1fr)_80px]">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-cyan-400 bg-[#087f9d] text-base font-semibold text-white sm:h-16 sm:w-16 sm:text-lg">
-        {getInitials(
-          currentUserId
-        )}
-      </div>
+                  <div className="flex min-h-0 flex-1 flex-col">
+                    <div className="grid grid-cols-[56px_minmax(0,1fr)_70px] items-center gap-3 rounded-lg border border-[#164b60] bg-[#041d29] p-3 sm:grid-cols-[64px_minmax(0,1fr)_80px]">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-cyan-400 bg-[#087f9d] text-base font-semibold text-white sm:h-16 sm:w-16 sm:text-lg">
+                        {getInitials(
+                          currentUserId
+                        )}
+                      </div>
 
-      <div className="min-w-0">
-        <div className="truncate text-base font-semibold text-white sm:text-lg">
-          Radar Profile
-        </div>
-
-        <div className="mt-1 text-xs text-cyan-300 sm:text-sm">
-          LEAGUE RADAR PROFILE
-        </div>
-
-        <div className="mt-1 text-[10px] text-cyan-100/60 sm:text-xs">
-          Week {week}
-        </div>
-      </div>
-
-      <div className="border-l border-[#31515d] pl-3 text-center">
-        <div className="text-2xl font-semibold text-cyan-300 sm:text-3xl">
-          —
-        </div>
-
-        <div className="text-[9px] uppercase tracking-wide text-cyan-100/60">
-          RANK
-        </div>
-
-        <div className="text-[9px] text-cyan-100/60">
-          Overall
-        </div>
-      </div>
-    </div>
-
-    <div className="mt-2 grid grid-cols-2 overflow-hidden rounded-lg border border-[#164b60] bg-[#041d29] sm:grid-cols-5">
-      {[
-        "WEEKLY SCORE",
-        "TOTAL SCORE",
-        "AVG / WEEK",
-        "BEST WEEK",
-        "RANK CHANGE",
-      ].map((label, index) => (
-        <div
-          key={label}
-          className={`p-1.5 text-center ${
-            index < 4
-              ? "border-b border-[#244b59] sm:border-b-0 sm:border-r"
-              : "col-span-2 sm:col-span-1"
-          }`}
-        >
-          <div className="text-[9px] tracking-wide text-cyan-100/60">
-            {label}
-          </div>
-
-          <div className="mt-1 text-lg font-regular text-white">
-            —
-          </div>
-        </div>
-      ))}
-    </div>
-
-    {/* ACHIEVEMENTS EARNED */}
-<div className="mt-3 rounded-lg border border-[#164b60] bg-[#041d29] p-3">
-  <div className="mb-2 flex items-center justify-between">
-  <div className="text-[10px] font-semibold tracking-widest text-white">
-    ACHIEVEMENTS EARNED
-  </div>
-
-  <button
-    type="button"
-    onClick={() => setSelectedArchetype("ACHIEVEMENTS")}
-    className="flex h-5 w-5 items-center justify-center rounded-full border border-[#4a6875] text-[10px] text-[#b8cbd2] transition hover:border-white hover:text-white"
-    title="About achievements"
-    aria-label="About achievements"
-  >
-    i
-  </button>
-</div>
-<div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
-                          {ACHIEVEMENT_SHELF.map((achievement) => {
-                            const earned = Boolean(earnedAchievements[achievement.flag]);
-
-                            return (
-                              <div
-                                key={achievement.type}
-                                title={earned ? achievement.type : "Not yet earned"}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center"
-                              >
-                                <img
-                                  src={achievement.image}
-                                  alt=""
-                                  className={`h-full w-full object-contain transition ${
-                                    earned
-                                      ? ""
-                                      : "grayscale brightness-[0.65] opacity-55"
-                                  }`}
-                                />
-                              </div>
-                            );
-                          })}
+                      <div className="min-w-0">
+                        <div className="truncate text-base font-semibold text-white sm:text-lg">
+                          Radar Profile
                         </div>
-</div>
 
-    {/* HISTORY */}
-<div className="mt-3 flex min-h-0 flex-1 flex-col rounded-lg border border-[#164b60] bg-[#041d29]">
-  <div className="flex items-center justify-between border-b border-[#244b59] px-3 py-2">
-    <div className="text-[10px] font-semibold tracking-widest text-white">
-      YOUR HISTORY
-    </div>
+                        <div className="mt-1 text-xs text-cyan-300 sm:text-sm">
+                          LEAGUE RADAR PROFILE
+                        </div>
 
-    <div className="text-[9px] text-cyan-200/60">
-      0 weeks
-    </div>
-  </div>
+                        <div className="mt-1 text-[10px] text-cyan-100/60 sm:text-xs">
+                          Week {week}
+                        </div>
+                      </div>
 
-  <div className="p-3 text-xs text-cyan-100/60">
-    No Radar history available.
-  </div>
-</div>
-  </div>
-) : (
+                      <div className="border-l border-[#31515d] pl-3 text-center">
+                        <div className="text-2xl font-semibold text-cyan-300 sm:text-3xl">
+                          —
+                        </div>
+
+                        <div className="text-[9px] uppercase tracking-wide text-cyan-100/60">
+                          RANK
+                        </div>
+
+                        <div className="text-[9px] text-cyan-100/60">
+                          Overall
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 grid grid-cols-2 overflow-hidden rounded-lg border border-[#164b60] bg-[#041d29] sm:grid-cols-5">
+                      {[
+                        "WEEKLY SCORE",
+                        "TOTAL SCORE",
+                        "AVG / WEEK",
+                        "BEST WEEK",
+                        "RANK CHANGE",
+                      ].map((label, index) => (
+                        <div
+                          key={label}
+                          className={`p-1.5 text-center ${
+                            index < 4
+                              ? "border-b border-[#244b59] sm:border-b-0 sm:border-r"
+                              : "col-span-2 sm:col-span-1"
+                          }`}
+                        >
+                          <div className="text-[9px] tracking-wide text-cyan-100/60">
+                            {label}
+                          </div>
+
+                          <div className="mt-1 text-lg font-regular text-white">
+                            —
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                        {/* ACHIEVEMENTS EARNED EMPTY PROFILE PREVIEW */}
+                    <div className="mt-3 rounded-lg border border-[#164b60] bg-[#041d29] p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                      <div className="text-[10px] font-semibold tracking-widest text-white">
+                        ACHIEVEMENTS EARNED
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedArchetype("ACHIEVEMENTS")}
+                        className="flex h-5 w-5 items-center justify-center rounded-full border border-[#4a6875] text-[10px] text-[#b8cbd2] transition hover:border-white hover:text-white"
+                        title="About achievements"
+                        aria-label="About achievements"
+                      >
+                        i
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+                                              {ACHIEVEMENT_SHELF.map((achievement) => {
+                                                const earned = Boolean(earnedAchievements[achievement.flag]);
+
+                                                return (
+                                                  <div
+                                                    key={achievement.type}
+                                                    title={earned ? achievement.type : "Not yet earned"}
+                                                    className="flex h-8 w-8 shrink-0 items-center justify-center"
+                                                  >
+                                                    <img
+                                                      src={achievement.image}
+                                                      alt=""
+                                                      className={`h-full w-full object-contain transition ${
+                                                        earned
+                                                          ? ""
+                                                          : "grayscale brightness-[0.65] opacity-55"
+                                                      }`}
+                                                    />
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                    </div>
+
+                        {/* HISTORY */}
+                    <div className="mt-3 flex min-h-0 flex-1 flex-col rounded-lg border border-[#164b60] bg-[#041d29]">
+                      <div className="flex items-center justify-between border-b border-[#244b59] px-3 py-2">
+                        <div className="text-[10px] font-semibold tracking-widest text-white">
+                          YOUR HISTORY
+                        </div>
+
+                        <div className="text-[9px] text-cyan-200/60">
+                          0 weeks
+                        </div>
+                      </div>
+
+                      <div className="p-3 text-xs text-cyan-100/60">
+                        No Radar history available.
+                      </div>
+                    </div>
+                      </div>
+                    ) : (
                     <>
                       {/* IDENTITY */}
                       <div className="grid grid-cols-[56px_minmax(0,1fr)_70px] items-center gap-3 rounded-lg border border-[#164b60] bg-[#041d29] p-3 sm:grid-cols-[64px_minmax(0,1fr)_80px]">
@@ -2984,20 +3047,20 @@ export default function LeagueRadarPage() {
                       {/* ACHIEVEMENTS EARNED */}
                       <div className="mt-3 rounded-lg border border-[#164b60] bg-[#041d29] p-3">
                         <div className="mb-2 flex items-center justify-between">
-  <div className="text-[10px] font-semibold tracking-widest text-white">
-    ACHIEVEMENTS EARNED
-  </div>
+                          <div className="text-[10px] font-semibold tracking-widest text-white">
+                            ACHIEVEMENTS EARNED
+                          </div>
 
-  <button
-    type="button"
-    onClick={() => setSelectedArchetype("ACHIEVEMENTS")}
-    className="flex h-5 w-5 items-center justify-center rounded-full border border-[#4a6875] text-[10px] text-[#b8cbd2] transition hover:border-white hover:text-white"
-    title="About achievements"
-    aria-label="About achievements"
-  >
-    i
-  </button>
-</div>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedArchetype("ACHIEVEMENTS")}
+                            className="flex h-5 w-5 items-center justify-center rounded-full border border-[#4a6875] text-[10px] text-[#b8cbd2] transition hover:border-white hover:text-white"
+                            title="About achievements"
+                            aria-label="About achievements"
+                          >
+                            i
+                          </button>
+                        </div>
 
                         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
                           {ACHIEVEMENT_SHELF.map((achievement) => {
@@ -3407,7 +3470,7 @@ export default function LeagueRadarPage() {
 />
 
         {/* ========================================================
-            ARCHETYPE EDUCATION MODAL
+            RADAR GUIDE MODAL
         ======================================================== */}
 
         <ArchetypeModal
