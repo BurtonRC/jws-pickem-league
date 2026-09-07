@@ -1771,6 +1771,93 @@ const ACHIEVEMENT_ICONS = {
   "BIGGEST UPSET": "/images/radar/achievements/biggest-upset-256.png",
 };
 
+const ACHIEVEMENT_SHELF = [
+  {
+    type: "NEW LEADER",
+    image: ACHIEVEMENT_ICONS["NEW LEADER"],
+    flag: "new_leader",
+  },
+  {
+    type: "BIGGEST CLIMB",
+    image: ACHIEVEMENT_ICONS["BIGGEST CLIMB"],
+    flag: "top_climber",
+  },
+  {
+    type: "HOT WEEK",
+    image: ACHIEVEMENT_ICONS["HOT WEEK"],
+    flag: "hot_week",
+  },
+  {
+    type: "TOP SCORE",
+    image: ACHIEVEMENT_ICONS["TOP SCORE"],
+    flag: "top_score",
+  },
+  {
+    type: "BIGGEST UPSET",
+    image: ACHIEVEMENT_ICONS["BIGGEST UPSET"],
+    flag: "biggest_upset",
+  },
+  {
+    type: "CLOSING THE GAP",
+    image: ACHIEVEMENT_ICONS["CLOSING THE GAP"],
+    flag: "closing_the_gap",
+  },
+  {
+    type: "DARK HORSE",
+    image: "/images/radar/archetypes/dark-horse-256.png",
+    flag: "dark_horse",
+  },
+  {
+    type: "GRINDER",
+    image: "/images/radar/archetypes/grinder-256.png",
+    flag: "grinder",
+  },
+  {
+    type: "HOT HAND",
+    image: "/images/radar/archetypes/hot-hand-256.png",
+    flag: "hot_hand",
+  },
+  {
+    type: "COMEBACK",
+    image: "/images/radar/archetypes/comeback-256.png",
+    flag: "comeback",
+  },
+  {
+    type: "CONTRARIAN",
+    image: "/images/radar/archetypes/contrarian-256.png",
+    flag: "contrarian",
+  },
+  {
+    type: "ON THE MOVE",
+    image: ACHIEVEMENT_ICONS["ON THE MOVE"],
+    flag: "on_the_move",
+  },
+];
+
+const ACHIEVEMENT_INFO = {
+  "NEW LEADER": {
+    description: "Take over 1st place in the league."
+  },
+  "BIGGEST CLIMB": {
+    description: "Make the biggest rank improvement of the week."
+  },
+  "HOT WEEK": {
+    description: "Produce an exceptional weekly score compared with recent performance and the league."
+  },
+  "TOP SCORE": {
+    description: "Finish the week with the highest score in the league."
+  },
+  "BIGGEST UPSET": {
+    description: "Record the biggest upset result of the week."
+  },
+  "CLOSING THE GAP": {
+    description: "Significantly reduce the gap to a rival ahead of you."
+  },
+  "ON THE MOVE": {
+    description: "Climb at least two places in the league standings."
+  }
+};
+
 const ACHIEVEMENT_LABEL_COLORS = {
   "TOP SCORE": "bg-[#45391a] border-[#64521f] text-[#f4cc0b]",
   "HOT WEEK": "bg-[#5a2211] border-[#792609] text-[#f4cc0b]",
@@ -2261,6 +2348,18 @@ export default function LeagueRadarPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const earnedAchievements = useMemo(() => {
+  const earned = {};
+
+  ACHIEVEMENT_SHELF.forEach((achievement) => {
+    earned[achievement.flag] = profileHistory.some(
+      (week) => Boolean(week[achievement.flag])
+    );
+  });
+
+  return earned;
+}, [profileHistory]);
+
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [selectedArchetype, setSelectedArchetype] =
     useState(null);
@@ -2268,7 +2367,7 @@ export default function LeagueRadarPage() {
     // TEMPORARY DEMO SWITCH — remove after the 2025 demonstration
   const DEMO_MODE = false;
   const DEMO_SEASON = 2025;
-  const DEMO_MAX_WEEK = 8;
+  const DEMO_MAX_WEEK = 2;
 
   const DEFAULT_SEASON = 2026;
   const DEFAULT_WEEK = 1;
@@ -2684,15 +2783,46 @@ export default function LeagueRadarPage() {
       ))}
     </div>
 
-    {/* TOP INSIGHTS */}
+    {/* ACHIEVEMENTS EARNED */}
 <div className="mt-3 rounded-lg border border-[#164b60] bg-[#041d29] p-3">
-  <div className="mb-2 text-[10px] font-semibold tracking-widest text-white">
-    YOUR TOP INSIGHTS
+  <div className="mb-2 flex items-center justify-between">
+  <div className="text-[10px] font-semibold tracking-widest text-white">
+    ACHIEVEMENTS EARNED
   </div>
 
-  <div className="text-xs text-cyan-100/60">
-    Radar insights will appear here after the first weekly results are recorded.
-  </div>
+  <button
+    type="button"
+    onClick={() => setSelectedArchetype("ACHIEVEMENTS")}
+    className="flex h-5 w-5 items-center justify-center rounded-full border border-[#4a6875] text-[10px] text-[#b8cbd2] transition hover:border-white hover:text-white"
+    title="About achievements"
+    aria-label="About achievements"
+  >
+    i
+  </button>
+</div>
+<div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+                          {ACHIEVEMENT_SHELF.map((achievement) => {
+                            const earned = Boolean(earnedAchievements[achievement.flag]);
+
+                            return (
+                              <div
+                                key={achievement.type}
+                                title={earned ? achievement.type : "Not yet earned"}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center"
+                              >
+                                <img
+                                  src={achievement.image}
+                                  alt=""
+                                  className={`h-full w-full object-contain transition ${
+                                    earned
+                                      ? ""
+                                      : "grayscale brightness-[0.65] opacity-55"
+                                  }`}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
 </div>
 
     {/* HISTORY */}
@@ -2851,39 +2981,46 @@ export default function LeagueRadarPage() {
                         </div>
                       </div>
 
-                      {/* TOP INSIGHTS */}
+                      {/* ACHIEVEMENTS EARNED */}
                       <div className="mt-3 rounded-lg border border-[#164b60] bg-[#041d29] p-3">
-                        <div className="mb-2 text-[10px] font-semibold tracking-widest text-white">
-                          YOUR TOP INSIGHTS
-                        </div>
+                        <div className="mb-2 flex items-center justify-between">
+  <div className="text-[10px] font-semibold tracking-widest text-white">
+    ACHIEVEMENTS EARNED
+  </div>
 
-                        <div className="space-y-2 text-xs text-cyan-50">
-                          <div className="flex items-start gap-2">
-                            <span className="text-cyan-300">
-                              ✥
-                            </span>
+  <button
+    type="button"
+    onClick={() => setSelectedArchetype("ACHIEVEMENTS")}
+    className="flex h-5 w-5 items-center justify-center rounded-full border border-[#4a6875] text-[10px] text-[#b8cbd2] transition hover:border-white hover:text-white"
+    title="About achievements"
+    aria-label="About achievements"
+  >
+    i
+  </button>
+</div>
 
-                            <span>
-                              Contrarian win rate:{" "}
-                              {formatRadarPercent(
-                                profile.contrarian_running_win_pct
-                              )}
-                            </span>
-                          </div>
+                        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+                          {ACHIEVEMENT_SHELF.map((achievement) => {
+                            const earned = Boolean(earnedAchievements[achievement.flag]);
 
-                          <div className="flex items-start gap-2">
-                            <span className="text-cyan-300">
-                              ◉
-                            </span>
-
-                            <span>
-                              {profile.contrarian_picks
-                                ? `${formatRadarNumber(
-                                    profile.contrarian_picks
-                                  )} contrarian picks this week.`
-                                : "Contrarian activity is developing."}
-                            </span>
-                          </div>
+                            return (
+                              <div
+                                key={achievement.type}
+                                title={earned ? achievement.type : "Not yet earned"}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center"
+                              >
+                                <img
+                                  src={achievement.image}
+                                  alt=""
+                                  className={`h-full w-full object-contain transition ${
+                                    earned
+                                      ? ""
+                                      : "grayscale brightness-[0.65] opacity-55"
+                                  }`}
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
