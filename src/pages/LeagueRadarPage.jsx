@@ -2450,7 +2450,7 @@ export default function LeagueRadarPage() {
   const [selectedArchetype, setSelectedArchetype] = useState(null);
   
     // TEMPORARY DEMO SWITCH — remove after the 2025 demonstration
-  const DEMO_MODE = true;
+  const DEMO_MODE = false;
   const DEMO_SEASON = 2025;
   const DEMO_MAX_WEEK = 2;
 
