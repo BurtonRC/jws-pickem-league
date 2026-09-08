@@ -204,7 +204,7 @@ export default function WeeklyPicksPage() {
             day === "Sun" && hourET < 12;
 
           if (isEarlyIntlSunday) {
-            day = "Sun Intnl";
+            day = "Sun Intl";
           }
 
           const location =
@@ -212,10 +212,31 @@ export default function WeeklyPicksPage() {
             competition?.venue?.fullName ||
             "";
 
+          const internationalLocations = [
+            "London",
+            "Germany",
+            "Frankfurt",
+            "Tottenham",
+            "Wembley",
+            "Munich",
+            "Mexico",
+            "Brazil",
+            "Sao Paulo",
+            "Madrid",
+            "Melbourne",
+          ];
+
+          const displayDay = internationalLocations.some((loc) =>
+            location.includes(loc)
+          )
+            ? `${day} Intl ${location}`
+            : day;
+
           return {
             id: game.id,
             teams: matchup,
             day,
+            displayDay,
             location,
             kickoffUTC,
             date: game.date,
@@ -482,19 +503,28 @@ export default function WeeklyPicksPage() {
   };
 
 
-  const DBToggle = (
-    game,
-    locked
-  ) => {
-    if (!game.dbEnabled) {
-      return null;
-    }
+const DBToggle = (
+  game,
+  locked
+) => {
+  if (!game.dbEnabled) {
+    return null;
+  }
 
-    const isOn =
-      Boolean(DBs[game.id]);
+  const isOn =
+    Boolean(DBs[game.id]);
 
-    return (
-      <label className="inline-flex items-center gap-2">
+  return (
+    <div
+      className={`flex items-center gap-2 ${
+        locked ? "opacity-50" : ""
+      }`}
+    >
+      <span className="text-sm">
+        {game.dbTeam}
+      </span>
+
+      <label className="relative inline-flex items-center cursor-pointer">
         <input
           type="checkbox"
           checked={isOn}
@@ -506,14 +536,14 @@ export default function WeeklyPicksPage() {
             )
           }
           disabled={locked}
-          className="toggle"
+          className="sr-only peer"
         />
-        <span className="text-sm">
-          {game.dbTeam}
-        </span>
+
+        <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
       </label>
-    );
-  };
+    </div>
+  );
+};
 
 
   const handleSelectChange = (
@@ -843,7 +873,16 @@ export default function WeeklyPicksPage() {
                         </td>
 
                         <td className="p-3">
-                          {game.day}
+                          {game.displayDay !== game.day ? (
+                          <>
+                            {game.day}{" "}
+                            <span className="font-bold">
+                              Intl {game.location}
+                            </span>
+                          </>
+                        ) : (
+                          game.day
+                        )}
                         </td>
 
                         <td className="p-3">
@@ -1133,7 +1172,16 @@ export default function WeeklyPicksPage() {
                     </div>
 
                     <div>
-                      Day: {game.day}
+                      Day: {game.displayDay !== game.day ? (
+                      <>
+                        {game.day}{" "}
+                        <span className="font-bold">
+                          Intl {game.location}
+                        </span>
+                      </>
+                    ) : (
+                      game.day
+                    )}
                     </div>
 
                     {DBToggle(
