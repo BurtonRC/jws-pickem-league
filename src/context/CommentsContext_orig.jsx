@@ -24,61 +24,62 @@ export function CommentsProvider({ children }) {
   //   }
   // };
 
-  // Helper: fetch reactions and merge into comments
-  const mergeReactions = async (baseComments) => {
-    if (!baseComments.length) return baseComments;
+// Helper: fetch reactions and merge into comments
+const mergeReactions = async (baseComments) => {
+  if (!baseComments.length) return baseComments;
 
-    const commentIds = baseComments.map((c) => c.id);
+  const commentIds = baseComments.map((c) => c.id);
 
-    // Fetch all reactions for these comments
-    const { data: reactionData, error: reactionError } = await supabase
+  // Fetch all reactions for these comments
+  const { data: reactionData, error: reactionError } = await supabase
+    .from("comment_reactions")
+    .select("comment_id, reaction_type")
+    .in("comment_id", commentIds);
+
+  if (reactionError) {
+    console.error("Error fetching reaction counts:", reactionError);
+  }
+
+  // Aggregate counts in JS
+  const countsMap = {};
+  reactionData?.forEach((r) => {
+    countsMap[r.comment_id] = countsMap[r.comment_id] || {};
+    countsMap[r.comment_id][r.reaction_type] =
+      (countsMap[r.comment_id][r.reaction_type] || 0) + 1;
+  });
+
+  // Get current user's reactions
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let userReactions = [];
+  if (user) {
+    const { data: urData, error: urError } = await supabase
       .from("comment_reactions")
       .select("comment_id, reaction_type")
+      .eq("user_id", user.id)
       .in("comment_id", commentIds);
 
-    if (reactionError) {
-      console.error("Error fetching reaction counts:", reactionError);
-    }
+    if (urError) console.error("Error fetching user reactions:", urError);
+    userReactions = urData ?? [];
+  }
 
-    // Aggregate counts in JS
-    const countsMap = {};
-    reactionData?.forEach((r) => {
-      countsMap[r.comment_id] = countsMap[r.comment_id] || {};
-      countsMap[r.comment_id][r.reaction_type] =
-        (countsMap[r.comment_id][r.reaction_type] || 0) + 1;
-    });
+  // Merge counts + userReaction into each comment
+  return baseComments.map((c) => {
+    const counts = countsMap[c.id] || {};
+    const userReaction = userReactions.find((ur) => ur.comment_id === c.id);
 
-    // Get current user's reactions
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    return {
+      ...c,
+      reactionCounts: counts,
+      userReaction: userReaction?.reaction_type ?? null,
+      // Keep replies array for your replies system
+      replies: [],
+    };
+  });
+};
 
-    let userReactions = [];
-    if (user) {
-      const { data: urData, error: urError } = await supabase
-        .from("comment_reactions")
-        .select("comment_id, reaction_type")
-        .eq("user_id", user.id)
-        .in("comment_id", commentIds);
-
-      if (urError) console.error("Error fetching user reactions:", urError);
-      userReactions = urData ?? [];
-    }
-
-    // Merge counts + userReaction into each comment
-    return baseComments.map((c) => {
-      const counts = countsMap[c.id] || {};
-      const userReaction = userReactions.find((ur) => ur.comment_id === c.id);
-
-      return {
-        ...c,
-        reactionCounts: counts,
-        userReaction: userReaction?.reaction_type ?? null,
-        // Keep replies array for your replies system
-        replies: [],
-      };
-    });
-  };
 
   // Fetch all comments from the view
   const fetchComments = async () => {
@@ -124,34 +125,9 @@ export function CommentsProvider({ children }) {
   // Add a new comment (supports replies)
   const addComment = async (userId, content, parentId = null) => {
     try {
-      let radarPlayerUserId = null;
-      let radarSeason = null;
-
-      // Replies to Radar comments inherit the parent's Radar context.
-      if (parentId) {
-        const { data: parentComment, error: parentError } = await supabase
-          .from("comments")
-          .select("radar_player_user_id, radar_season")
-          .eq("id", parentId)
-          .single();
-
-        if (parentError) throw parentError;
-
-        radarPlayerUserId = parentComment?.radar_player_user_id ?? null;
-        radarSeason = parentComment?.radar_season ?? null;
-      }
-
       const { data: insertedComment, error: insertError } = await supabase
         .from("comments")
-        .insert([
-          {
-            user_id: userId,
-            content,
-            parent_comment_id: parentId,
-            radar_player_user_id: radarPlayerUserId,
-            radar_season: radarSeason,
-          },
-        ])
+        .insert([{ user_id: userId, content, parent_comment_id: parentId }])
         .select("*")
         .single();
 
@@ -233,18 +209,9 @@ export function CommentsProvider({ children }) {
 
             const mergedComment = (await mergeReactions([data]))[0];
 
-            setComments((prev) => {
-              // addComment already updates local state; prevent the same
-              // realtime INSERT from adding a duplicate.
-              const alreadyExists = prev.some((c) => {
-                if (c.id === mergedComment.id) return true;
-                return c.replies?.some((r) => r.id === mergedComment.id);
-              });
-
-              if (alreadyExists) return prev;
-
-              if (mergedComment.parent_comment_id) {
-                return prev.map((c) => {
+            if (mergedComment.parent_comment_id) {
+              setComments((prev) =>
+                prev.map((c) => {
                   if (c.id === mergedComment.parent_comment_id) {
                     return {
                       ...c,
@@ -252,12 +219,11 @@ export function CommentsProvider({ children }) {
                     };
                   }
                   return c;
-                });
-              }
-
-              return [mergedComment, ...prev];
-            });
-
+                })
+              );
+            } else {
+              setComments((prev) => [mergedComment, ...prev]);
+            }
             // scrollToBottom(); // removed
           } catch (err) {
             console.error("Error fetching new comment:", err);
@@ -273,14 +239,7 @@ export function CommentsProvider({ children }) {
 
   return (
     <CommentsContext.Provider
-      value={{
-        comments,
-        addComment,
-        loading,
-        commentsEndRef,
-        fetchComments,
-        updateComment,
-      }}
+      value={{ comments, addComment, loading, commentsEndRef, fetchComments, updateComment }}
     >
       {children}
     </CommentsContext.Provider>

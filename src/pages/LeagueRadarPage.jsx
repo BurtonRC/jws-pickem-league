@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import { supabase } from "@/supabaseClient";
 
@@ -212,7 +213,7 @@ const ARCHETYPES = [
 const RADAR_SITUATION_PRIORITY = [
   "NEW LEADER",
   "TOP SCORE",
-  "BIGGEST CLIMB",
+  "TOP CLIMBER",
   "BIGGEST UPSET",
   "COMEBACK",
   "ON THE MOVE",
@@ -227,7 +228,7 @@ function getRadarSituation(player) {
   const flags = {
     "NEW LEADER": player?.new_leader,
     "TOP SCORE": player?.top_score,
-    "BIGGEST CLIMB": player?.top_climber,
+    "TOP CLIMBER": player?.top_climber,
     "BIGGEST UPSET": player?.biggest_upset,
     "COMEBACK": player?.comeback,
     "ON THE MOVE": player?.on_the_move,
@@ -440,9 +441,9 @@ const RADAR_DIALOGUE = {
         ],
     },
 
-    "BIGGEST CLIMB": {
+    "TOP CLIMBER": {
         profile: [
-            "The week's biggest climber.",
+            "The week's top climber.",
             "Making the biggest move.",
             "A major move up the board.",
             "Climbing fast.",
@@ -492,7 +493,7 @@ const RADAR_DIALOGUE = {
         ],
         modal: [
             (p) => ({
-                title: "Biggest Climb",
+                title: "Top Climber",
                 text: `${p.username} made the biggest move up the leaderboard in Week ${p.week}.`,
             }),
             (p) => ({
@@ -1634,7 +1635,7 @@ function getHighlightItems(player) {
     );
 
     items.push({
-      type: "BIGGEST CLIMB",
+      type: "TOP CLIMBER",
       description: `Moved up ${movement} ${
         movement === 1 ? "place" : "places"
       } this week.`,
@@ -1764,7 +1765,7 @@ const ACHIEVEMENT_ICONS = {
   "TOP SCORE": "/images/radar/achievements/top-score-256.png",
   "HOT WEEK": "/images/radar/achievements/hot-week-256.png",
   "NEW LEADER": "/images/radar/achievements/leader-256.png",
-  "BIGGEST CLIMB": "/images/radar/achievements/top-climber-256.png",
+  "TOP CLIMBER": "/images/radar/achievements/top-climber-256.png",
   "ON THE MOVE": "/images/radar/achievements/on-the-move-256.png",
   "CLOSING THE GAP":
     "/images/radar/achievements/closing-the-gap-256.png",
@@ -1778,8 +1779,8 @@ const ACHIEVEMENT_SHELF = [
     flag: "new_leader",
   },
   {
-    type: "BIGGEST CLIMB",
-    image: ACHIEVEMENT_ICONS["BIGGEST CLIMB"],
+    type: "TOP CLIMBER",
+    image: ACHIEVEMENT_ICONS["TOP CLIMBER"],
     flag: "top_climber",
   },
   {
@@ -1836,25 +1837,25 @@ const ACHIEVEMENT_SHELF = [
 
 const ACHIEVEMENT_INFO = {
   "NEW LEADER": {
-    description: "Take over 1st place in the league."
+    description: "Take over 1st place in the league. You were not #1 the previous week and move into the top spot this week."
   },
-  "BIGGEST CLIMB": {
-    description: "Make the biggest rank improvement of the week."
+  "TOP CLIMBER": {
+    description: "Make the biggest improvement in league position. You moved up more places than anyone else that week. Ties are allowed."
   },
   "HOT WEEK": {
-    description: "Produce an exceptional weekly score compared with recent performance and the league."
+    description: "Score at least 5 points above your previous 3-week average and at least 2 points above the league average. Starts in Week 4."
   },
   "TOP SCORE": {
-    description: "Finish the week with the highest score in the league."
+    description: "Post the highest weekly score in the league. Multiple players can earn it when they tie for the top score."
   },
   "BIGGEST UPSET": {
-    description: "Record the biggest upset result of the week."
+    description: "Correctly pick a winner chosen by 10% or less of submitted picks for that game. Every player who makes a qualifying upset pick earns it."
   },
   "CLOSING THE GAP": {
-    description: "Significantly reduce the gap to a rival ahead of you."
+    description: "Reduce the points gap to the player immediately ahead of you by at least 1 point. The same player must remain directly ahead."
   },
   "ON THE MOVE": {
-    description: "Climb at least two places in the league standings."
+    description: "Climb at least 2 places in the league standings."
   }
 };
 
@@ -1862,7 +1863,7 @@ const ACHIEVEMENT_LABEL_COLORS = {
   "TOP SCORE": "bg-[#45391a] border-[#64521f] text-[#f4cc0b]",
   "HOT WEEK": "bg-[#5a2211] border-[#792609] text-[#f4cc0b]",
   "NEW LEADER": "bg-[#679264] border-[#8aae87] text-[#ededed]",
-  "BIGGEST CLIMB": "bg-[#103a1e] border-[#2f7e30] text-[#68c385]",
+  "TOP CLIMBER": "bg-[#103a1e] border-[#2f7e30] text-[#68c385]",
   "ON THE MOVE": "bg-[#013054] border-[#005186] text-[#13b5fc]",
   "CLOSING THE GAP": "bg-[#c52a9d] border-[#ea4fc2] text-[#ededed]",
   "BIGGEST UPSET": "bg-[#d2020a] border-[#f91a1e] text-[#ededed]",
@@ -2209,11 +2210,30 @@ function PlayerModal({
       return;
     }
 
+    // Find the existing root comment for this player's Radar thread.
+    // Subsequent comments from the Radar modal should join that thread
+    // instead of creating a new top-level Comments Page post.
+    const { data: rootComment, error: rootError } = await supabase
+      .from("comments")
+      .select("id")
+      .eq("radar_player_user_id", player.user_id)
+      .eq("radar_season", player.season)
+      .is("parent_comment_id", null)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (rootError) {
+      console.error("Radar comment thread lookup failed:", rootError);
+      return;
+    }
+
     const { error } = await supabase
       .from("comments")
       .insert({
         user_id: user.id,
         content,
+        parent_comment_id: rootComment?.id ?? null,
         radar_player_user_id: player.user_id,
         radar_season: player.season,
       });
@@ -2251,10 +2271,10 @@ function PlayerModal({
       className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-3 sm:p-5"
       onClick={onClose}
     >
-      <div
-        className="w-full max-w-2xl overflow-hidden rounded-xl border border-cyan-700/80 bg-[#07566A] shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
+        <div
+          className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-cyan-700/80 bg-[#07566A] shadow-2xl"
+          onClick={(event) => event.stopPropagation()}
+        >
         {/* HEADER */}
         <div className="flex items-start justify-between border-b border-[#023343] bg-[#03455b] px-5 py-4 sm:px-6">
           <div className="min-w-0">
@@ -2304,7 +2324,7 @@ function PlayerModal({
 
             <div className="rounded-lg border border-cyan-300/50 bg-[#064c61] px-5 py-4">
               {player.primary_label ? (
-  <>
+            <>
                     <div className="flex items-center gap-2">
                     {getArchetypeByLabel(player.primary_label) && (
                         <img
@@ -2400,6 +2420,8 @@ function PlayerModal({
 ============================================================ */
 
 export default function LeagueRadarPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [radarData, setRadarData] = useState([]);
   
   const [profileHistory, setProfileHistory] = useState([]);
@@ -2428,7 +2450,7 @@ export default function LeagueRadarPage() {
   const [selectedArchetype, setSelectedArchetype] = useState(null);
   
     // TEMPORARY DEMO SWITCH — remove after the 2025 demonstration
-  const DEMO_MODE = false;
+  const DEMO_MODE = true;
   const DEMO_SEASON = 2025;
   const DEMO_MAX_WEEK = 2;
 
@@ -2587,6 +2609,51 @@ export default function LeagueRadarPage() {
     };
   }, []);
 
+    useEffect(() => {
+    const radarPlayerUserId =
+      location.state?.radarPlayerUserId;
+
+    const radarSeason =
+      location.state?.radarSeason;
+
+    if (
+      !radarPlayerUserId ||
+      !radarSeason ||
+      !season ||
+      radarData.length === 0
+    ) {
+      return;
+    }
+
+    if (Number(radarSeason) !== Number(season)) {
+      return;
+    }
+
+    const targetPlayer = radarData.find(
+      (player) =>
+        player.user_id === radarPlayerUserId
+    );
+
+    if (!targetPlayer) {
+      return;
+    }
+
+    setSelectedPlayer(targetPlayer);
+
+    // Consume the navigation state so refreshing the Radar page
+    // does not reopen the modal.
+    navigate(location.pathname, {
+      replace: true,
+      state: null,
+    });
+  }, [
+    location.state,
+    location.pathname,
+    navigate,
+    radarData,
+    season,
+  ]);
+
     const loadRadarWeek = async (targetWeek) => {
     if (!season || targetWeek === week) return;
 
@@ -2674,7 +2741,7 @@ export default function LeagueRadarPage() {
         </PageHeader>
 
         {!loading && !error && (
-          <div className="mb-5 mt-2 flex items-center gap-1 text-sm text-gray-500">
+          <div className="mb-5 mt-2 flex items-center justify-center gap-1 text-sm text-gray-500 lg:justify-start">
   <div>Season {season} &nbsp;</div>
 
   <div className="flex items-center">
@@ -2737,12 +2804,12 @@ export default function LeagueRadarPage() {
                 RADAR HEADER
             ================================================== */}
 
-            <div className="flex flex-col gap-2 border-b border-[#17313d] pb-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm tracking-[0.22em] text-cyan-200 sm:text-base">
-                IT'S HOW YOU PLAY, NOT JUST YOUR SCORE
+            <div className="flex flex-col items-center gap-2 border-b border-[#17313d] pb-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-center text-sm tracking-[0.22em] text-cyan-200 sm:text-left sm:text-base">
+                IT'S HOW YOU PLAY,<br className="sm:hidden" /> NOT JUST YOUR SCORE
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-2">
   <div className="flex items-center gap-2">
     <span className="text-xs tracking-wide text-cyan-100 sm:text-sm">
       LEAGUE ARCHETYPES
@@ -3106,6 +3173,9 @@ export default function LeagueRadarPage() {
                                 min-h-0
                                 flex-1
                                 overflow-y-auto
+                                max-h-[240px]
+                                overflow-y-auto
+                                lg:max-h-none
                                 [scrollbar-width:thin]
                                 [scrollbar-color:#315766_transparent]
                                 [&::-webkit-scrollbar]:w-1.5
@@ -3231,8 +3301,10 @@ export default function LeagueRadarPage() {
                     className="
                         min-h-0
                         flex-1
+                        max-h-[240px]
                         overflow-y-auto
                         p-2
+                        lg:max-h-none
                         [scrollbar-width:thin]
                         [scrollbar-color:#315766_transparent]
                         [&::-webkit-scrollbar]:w-1.5
@@ -3274,23 +3346,23 @@ export default function LeagueRadarPage() {
                                 
                               {highlight.archetype ? (
                                     <div
-    className="mt-2 text-[12px] font-semibold"
-    style={{ color: highlight.archetype.color }}
->
+                                        className="mt-2 text-[12px] font-semibold"
+                                        style={{ color: highlight.archetype.color }}
+                                    >
+                                                                            {highlight.type}
+                                                                        </div>
+                                                                    ) : (
+                                                                        
+                                                                        <div
+                                      className={`mb-1 inline-flex rounded-sm border px-3 py-0.5 ${
+                                        ACHIEVEMENT_LABEL_COLORS[highlight.type] ||
+                                        "border-white/10 bg-white/10 text-white"
+                                      }`}
+                                    >
+                                      <span className="text-[9px] font-bold tracking-wide">
                                         {highlight.type}
+                                      </span>
                                     </div>
-                                ) : (
-                                    
-                                    <div
-  className={`mb-1 inline-flex rounded-sm border px-3 py-0.5 ${
-    ACHIEVEMENT_LABEL_COLORS[highlight.type] ||
-    "border-white/10 bg-white/10 text-white"
-  }`}
->
-  <span className="text-[9px] font-bold tracking-wide">
-    {highlight.type}
-  </span>
-</div>
                                 )}
 
                               <div className="truncate text-[11px] font-medium text-white">
@@ -3360,7 +3432,9 @@ export default function LeagueRadarPage() {
                     className="
                         min-h-0
                         flex-1
+                        max-h-[240px]
                         overflow-y-auto
+                        lg:max-h-none
                         [scrollbar-width:thin]
                         [scrollbar-color:#315766_transparent]
                         [&::-webkit-scrollbar]:w-1.5
