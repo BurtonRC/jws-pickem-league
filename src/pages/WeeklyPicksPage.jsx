@@ -905,41 +905,28 @@ export default function WeeklyPicksPage() {
 
                         <td className="p-3">
                           <select
-                            className={`border rounded p-1 w-full ${
-                              selectedTeams[
-                                game.id
-                              ]
-                                ? "bg-yellow-200"
-                                : ""
-                            } ${
-                              game.pointSpread
-                                ?.length > 0
-                                ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                : ""
-                            }`}
-                            value={
-                              selectedTeams[
-                                game.id
-                              ] || ""
-                            }
-                            onChange={(e) =>
-                              handleSelectChange(
-                                game.id,
-                                e.target.value,
-                                game.dbTeam
-                              )
-                            }
-                            disabled={
-                              locked ||
-                              game.pointSpread
-                                ?.length > 0 ||
-                              (!isFirstSubmitGame(
-                                game
-                              ) &&
-                                secondSubmitLockedGames.includes(
-                                  String(game.id)
-                                ))
-                            }
+  className={`border rounded p-1 w-full ${
+    selectedTeams[game.id]
+      ? "bg-yellow-200"
+      : ""
+  }`}
+  value={
+    selectedTeams[game.id] || ""
+  }
+  onChange={(e) =>
+    handleSelectChange(
+      game.id,
+      e.target.value,
+      game.dbTeam
+    )
+  }
+  disabled={
+    locked ||
+    (!isFirstSubmitGame(game) &&
+      secondSubmitLockedGames.includes(
+        String(game.id)
+      ))
+  }
                           >
                             <option value="">
                               {!isFirstSubmitGame(
