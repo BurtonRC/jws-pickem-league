@@ -27,6 +27,41 @@ function getInitials(username) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
+function getProfileColor(userId) {
+  const colors = [
+    "#1683A3",
+    "#8A4FB3",
+    "#B06A32",
+    "#3D9665",
+    "#A84560",
+    "#5574B5",
+    "#9A8428",
+    "#3D8F8F",
+    "#D05A3A",
+    "#3F8FC4",
+    "#A64F91",
+    "#5E9E3F",
+    "#C07825",
+    "#6A58B8",
+    "#C04468",
+    "#2E9A87",
+    "#B34F35",
+    "#4678C8",
+    "#8B5BB5",
+    "#7B9E32",
+  ];
+
+  if (!userId) return colors[0];
+
+  let hash = 0;
+
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+  }
+
+  return colors[hash % colors.length];
+}
+
 function parseTimestamp(ts) {
   if (!ts) return new Date(NaN);
   return new Date(ts.includes("T") ? ts : `${ts}Z`);
@@ -111,16 +146,17 @@ function RadarIcon() {
   );
 }
 
-function UserAvatar({ username, radar = false }) {
+function UserAvatar({ username, userId, radar = false }) {
   if (radar) return <RadarIcon />;
 
   return (
     <span
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#102b44] text-[12px] font-bold text-white"
-      aria-hidden="true"
-    >
-      {getInitials(username)}
-    </span>
+  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[12px] font-bold text-white"
+  style={{ backgroundColor: getProfileColor(userId) }}
+  aria-hidden="true"
+>
+  {getInitials(username)}
+</span>
   );
 }
 
@@ -445,6 +481,7 @@ export default function CommentsPage({ user }) {
           <div className="flex gap-3 p-3 sm:p-4">
             <UserAvatar
               username={comment.username}
+              userId={comment.user_id}
               radar={isRadar}
             />
 
@@ -512,7 +549,7 @@ export default function CommentsPage({ user }) {
                     <button
                       type="button"
                       onClick={() => toggleReplies(comment.id)}
-                      className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[12px] font-medium text-[#1769e8] hover:bg-blue-100"
+                      className="inline-flex items-center gap-1 rounded-full border border-[#19642f] bg-[#22a447] px-2 py-0.5 text-[12px] font-semibold text-white hover:bg-green-400"
                     >
                       <span aria-hidden="true">
                         {expandedCommentIds.has(comment.id) ? "×" : "›"}
@@ -547,11 +584,12 @@ export default function CommentsPage({ user }) {
                 >
                   <div className="flex items-end gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
                     <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#102b44] text-[10px] font-bold text-white"
-                      aria-hidden="true"
-                    >
-                      {getInitials(user?.user_metadata?.username)}
-                    </span>
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                    style={{ backgroundColor: getProfileColor(user?.id) }}
+                    aria-hidden="true"
+                  >
+                    {getInitials(user?.user_metadata?.username)}
+                  </span>
 
                     <textarea
                       ref={replyTextareaRef}
@@ -678,6 +716,7 @@ export default function CommentsPage({ user }) {
               <div className="flex items-end gap-3">
                 <UserAvatar
                   username={user?.user_metadata?.username}
+                  userId={user?.id}
                 />
 
                 <textarea
