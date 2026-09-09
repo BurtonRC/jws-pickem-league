@@ -1250,15 +1250,28 @@ const DBToggle = (
                       game.day
                     )}
                     </div>
+                    
 
-                    {DBToggle(
-                      game,
-                      locked
+                    {game.dbEnabled && (
+                      <>
+                        <div className="text-sm font-semibold mt-2">
+                          Drive-By
+                        </div>
+
+                        {DBToggle(
+                          game,
+                          locked
+                        )}
+                      </>
                     )}
 
-                    {game.pointSpread?.length >
-                      0 && (
-                      <select
+                    {game.pointSpread?.length > 0 && (
+  <>
+                    <div className="text-sm font-semibold mt-2">
+                      Disruptor Point Spread
+                    </div>
+
+                    <select
                         className={`border rounded p-1 w-full mt-2 ${
                           pointSpreadSelection[
                             game.id
@@ -1300,6 +1313,7 @@ const DBToggle = (
                           )
                         )}
                       </select>
+                      </>
                     )}
 
                     <select
