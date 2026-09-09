@@ -328,6 +328,73 @@ export default function WeeklyPicksPage() {
   }, []);
 
 
+    // Restore previously submitted picks when returning to the page
+  useEffect(() => {
+    const fetchExistingPicks = async () => {
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("weekly_picks")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("season", manualSeason)
+        .eq("week", manualWeekNumber)
+        .maybeSingle();
+
+      if (error) {
+        console.error(
+          "Error fetching existing picks:",
+          error
+        );
+        return;
+      }
+
+      if (!data) return;
+
+      // Restore saved selections
+      setSelectedTeams(data.picks || {});
+      setDBs(data.dbs || {});
+      setPointSpreadSelection(
+        data.point_spreads || {}
+      );
+
+      if (data.survivor_pick) {
+        setSurvivorPick(data.survivor_pick);
+      }
+
+      // Determine which submission groups have already
+      // been saved.
+      const savedPicks = data.picks || {};
+
+      const firstGames = games.filter(
+        isFirstSubmitGame
+      );
+
+      const secondGames = games.filter(
+        (game) => !isFirstSubmitGame(game)
+      );
+
+      const firstComplete =
+        firstGames.length > 0 &&
+        firstGames.every(
+          (game) => savedPicks[game.id]
+        );
+
+      const secondComplete =
+        secondGames.length > 0 &&
+        secondGames.every(
+          (game) => savedPicks[game.id]
+        );
+
+      setSubmittedFirst(firstComplete);
+      setSubmittedSecond(
+        firstComplete && secondComplete
+      );
+    };
+
+    fetchExistingPicks();
+  }, [user, games]);
+
   // Fetch all past survivor picks for this user
   useEffect(() => {
     async function fetchSurvivorPicks() {
