@@ -72,7 +72,7 @@ export default function WeeklyPicksPage() {
   // Helper: determine if a game is in the first submit group (Thu–Sat + early international)
   const isFirstSubmitGame = (game) => {
     // 1. Always Thu / Fri / Sat
-    if (["Thu", "Fri", "Sat"].includes(game.day)) return true;
+    if (["Wed", "Thu", "Fri", "Sat"].includes(game.day)) return true;
 
     // 2. Include early international games (before 12:00 ET)
     const kickoff = new Date(game.kickoffUTC || game.kickoff);
@@ -283,6 +283,12 @@ export default function WeeklyPicksPage() {
             psTeam: cfg?.ps_team || "",
           };
         });
+
+        mergedGames.sort(
+  (a, b) =>
+    new Date(a.kickoffUTC).getTime() -
+    new Date(b.kickoffUTC).getTime()
+);
 
         setGames(mergedGames);
 
