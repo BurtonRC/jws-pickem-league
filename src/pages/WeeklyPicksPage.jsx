@@ -587,7 +587,7 @@ const DBToggle = (
         locked ? "opacity-50" : ""
       }`}
     >
-      <span className="text-sm">
+      <span className="text-base">
         {game.dbTeam}
       </span>
 
@@ -674,6 +674,7 @@ const DBToggle = (
       setWarnOpen(true);
       return;
     }
+    
 
     const payload = {
       season: manualSeason,
@@ -722,7 +723,7 @@ const DBToggle = (
 
 
   const onSubmitSecond = async () => {
-    setWarnMessages([]);
+  setWarnMessages([]);
 
     const missing = games
       .filter(
@@ -737,6 +738,28 @@ const DBToggle = (
       setWarnMessages([
         "Please make all remaining picks before submitting."
       ]);
+      setWarnOpen(true);
+      return;
+    }
+
+    const messages = [];
+
+    const driveByOK = Object.keys(DBs).length > 0;
+
+    if (!driveByOK) {
+      messages.push(
+        "Select at least one Drive-By for the week."
+      );
+    }
+
+    if (!survivorLost && !survivorPick) {
+      messages.push(
+        "Select your Survivor pick."
+      );
+    }
+
+    if (messages.length > 0) {
+      setWarnMessages(messages);
       setWarnOpen(true);
       return;
     }
