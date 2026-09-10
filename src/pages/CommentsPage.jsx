@@ -118,6 +118,15 @@ function flattenComments(items) {
   return result;
 }
 
+function countAllReplies(comment) {
+  if (!Array.isArray(comment.replies)) return 0;
+
+  return comment.replies.reduce(
+    (total, reply) => total + 1 + countAllReplies(reply),
+    0
+  );
+}
+
 function SpeechBubbleIcon() {
   return (
     <svg
@@ -545,19 +554,19 @@ export default function CommentsPage({ user }) {
                 />
 
                 {Array.isArray(comment.replies) &&
-                  comment.replies.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => toggleReplies(comment.id)}
-                      className="inline-flex items-center gap-1 rounded-full border border-[#19642f] bg-[#22a447] px-2 py-0.5 text-[12px] font-semibold text-white hover:bg-green-400"
-                    >
-                      <span aria-hidden="true">
-                        {expandedCommentIds.has(comment.id) ? "×" : "›"}
-                      </span>
-                      {comment.replies.length}{" "}
-                      {comment.replies.length === 1 ? "Reply" : "Replies"}
-                    </button>
-                  )}
+  comment.replies.length > 0 && (
+    <button
+      type="button"
+      onClick={() => toggleReplies(comment.id)}
+      className="inline-flex items-center gap-1 rounded-full border border-[#19642f] bg-[#22a447] px-2 py-0.5 text-[12px] font-semibold text-white hover:bg-green-400"
+    >
+      <span aria-hidden="true">
+        {expandedCommentIds.has(comment.id) ? "×" : "›"}
+      </span>
+      {countAllReplies(comment)}{" "}
+      {countAllReplies(comment) === 1 ? "Reply" : "Replies"}
+    </button>
+  )}
 
                 <button
                   type="button"

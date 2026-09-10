@@ -10,6 +10,51 @@ export function useComments() {
   return useContext(CommentsContext);
 }
 
+function addReplyToCommentTree(comments, parentId, newReply) {
+  return comments.map((comment) => {
+    if (comment.id === parentId) {
+      return {
+        ...comment,
+        replies: [newReply, ...(comment.replies || [])],
+      };
+    }
+
+    if (comment.replies?.length) {
+      return {
+        ...comment,
+        replies: addReplyToCommentTree(
+          comment.replies,
+          parentId,
+          newReply
+        ),
+      };
+    }
+
+    return comment;
+  });
+}
+
+function updateCommentInTree(comments, commentId, updateFn) {
+  return comments.map((comment) => {
+    if (comment.id === commentId) {
+      return updateFn(comment);
+    }
+
+    if (comment.replies?.length) {
+      return {
+        ...comment,
+        replies: updateCommentInTree(
+          comment.replies,
+          commentId,
+          updateFn
+        ),
+      };
+    }
+
+    return comment;
+  });
+}
+
 // Provider
 export function CommentsProvider({ children }) {
   const [comments, setComments] = useState([]);
@@ -169,22 +214,14 @@ export function CommentsProvider({ children }) {
       const mergedComment = (await mergeReactions([data]))[0];
 
       if (parentId) {
-        // Add reply to parent comment (newest on top)
-        setComments((prev) =>
-          prev.map((c) => {
-            if (c.id === parentId) {
-              return {
-                ...c,
-                replies: [mergedComment, ...(c.replies || [])],
-              };
-            }
-            return c;
-          })
-        );
-      } else {
-        // Add top-level comment (newest on top)
-        setComments((prev) => [mergedComment, ...prev]);
-      }
+  // Add reply anywhere in the nested comment tree (newest on top)
+  setComments((prev) =>
+    addReplyToCommentTree(prev, parentId, mergedComment)
+  );
+} else {
+  // Add top-level comment (newest on top)
+  setComments((prev) => [mergedComment, ...prev]);
+}
 
       // scrollToBottom(); // removed to prevent jumping
     } catch (err) {
@@ -194,24 +231,10 @@ export function CommentsProvider({ children }) {
 
   // Update a single comment in state (used for optimistic reactions)
   const updateComment = (commentId, updateFn) => {
-    setComments((prev) =>
-      prev.map((c) => {
-        if (c.id === commentId) {
-          return updateFn(c);
-        }
-        // also check in replies
-        if (c.replies?.length) {
-          return {
-            ...c,
-            replies: c.replies.map((r) =>
-              r.id === commentId ? updateFn(r) : r
-            ),
-          };
-        }
-        return c;
-      })
-    );
-  };
+  setComments((prev) =>
+    updateCommentInTree(prev, commentId, updateFn)
+  );
+};
 
   useEffect(() => {
     fetchComments();
@@ -236,23 +259,25 @@ export function CommentsProvider({ children }) {
             setComments((prev) => {
               // addComment already updates local state; prevent the same
               // realtime INSERT from adding a duplicate.
-              const alreadyExists = prev.some((c) => {
-                if (c.id === mergedComment.id) return true;
-                return c.replies?.some((r) => r.id === mergedComment.id);
-              });
+              const existsInTree = (items) =>
+                items.some((comment) => {
+                  if (comment.id === mergedComment.id) return true;
+
+                  return comment.replies?.length
+                    ? existsInTree(comment.replies)
+                    : false;
+                });
+
+              const alreadyExists = existsInTree(prev);
 
               if (alreadyExists) return prev;
 
               if (mergedComment.parent_comment_id) {
-                return prev.map((c) => {
-                  if (c.id === mergedComment.parent_comment_id) {
-                    return {
-                      ...c,
-                      replies: [mergedComment, ...(c.replies || [])],
-                    };
-                  }
-                  return c;
-                });
+                return addReplyToCommentTree(
+                  prev,
+                  mergedComment.parent_comment_id,
+                  mergedComment
+                );
               }
 
               return [mergedComment, ...prev];
