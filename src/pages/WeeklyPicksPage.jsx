@@ -797,13 +797,16 @@ const DBToggle = (
       );
 
     if (error) {
-      console.error(
-        "Error saving picks:",
-        error
-      );
+      console.error("Error saving picks:", error);
+
       setWarnMessages([
-        "Unable to save picks."
-      ]);
+        "Unable to save picks.",
+        error.message || "Unknown database error.",
+        error.details || "",
+        error.hint || "",
+        error.code ? `Database code: ${error.code}` : "",
+      ].filter(Boolean));
+
       setWarnOpen(true);
       return;
     }
