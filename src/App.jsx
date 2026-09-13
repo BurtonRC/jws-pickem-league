@@ -329,7 +329,11 @@ export default function App() {
         {/* Catch-all redirect */}
         <Route
           path="*"
-          element={user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />}
+          element={
+            <div className="min-h-screen flex items-center justify-center">
+              Unknown route: {window.location.pathname}
+            </div>
+          }
         />
       </Routes>
   )}
