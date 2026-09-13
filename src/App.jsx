@@ -28,28 +28,30 @@ import ScrollToTop from "./components/ScrollToTop";
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCheckComplete, setAdminCheckComplete] = useState(false);
 
   useEffect(() => {
-    // Check session on load
-    supabase.auth.getSession().then(({ data: { session } }) => {
+  // Check session on load
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    setUser(session?.user ?? null);
+    setAuthLoading(false);
+  });
+
+  // Listen for auth changes (login/logout)
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
       setUser(session?.user ?? null);
-    });
+    }
+  );
 
-    // Listen for auth changes (login/logout)
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-      }
-    );
-
-    return () => {
-      if (listener?.subscription) {
-        listener.subscription.unsubscribe();
-      }
-    };
-  }, []);
+  return () => {
+    if (listener?.subscription) {
+      listener.subscription.unsubscribe();
+    }
+  };
+}, []);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -87,7 +89,12 @@ export default function App() {
   return (
    <>
      <ScrollToTop />
-    <CommentsProvider> 
+    <CommentsProvider>
+        {authLoading ? (
+    <div className="min-h-screen flex items-center justify-center">
+      Loading...
+    </div>
+  ) : ( 
       <Routes>
         {/* Root redirect */}
         <Route
@@ -317,6 +324,7 @@ export default function App() {
           element={user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />}
         />
       </Routes>
+  )}
     </CommentsProvider>
     </>
   );
