@@ -33,18 +33,26 @@ export default function App() {
   const [adminCheckComplete, setAdminCheckComplete] = useState(false);
 
   useEffect(() => {
-  // Check session on load
-  supabase.auth.getSession().then(({ data: { session } }) => {
+  let listener;
+
+  const initializeAuth = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     setUser(session?.user ?? null);
     setAuthLoading(false);
-  });
 
-  // Listen for auth changes (login/logout)
-  const { data: listener } = supabase.auth.onAuthStateChange(
-    (_event, session) => {
-      setUser(session?.user ?? null);
-    }
-  );
+    const { data } = await supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    listener = data;
+  };
+
+  initializeAuth();
 
   return () => {
     if (listener?.subscription) {
