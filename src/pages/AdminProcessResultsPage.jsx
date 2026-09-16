@@ -232,11 +232,12 @@ export default function AdminProcessResultsPage() {
 
             <select
               value={season}
-              onChange={(e) =>
-                setSeason(
-                  Number(e.target.value)
-                )
-              }
+              onChange={(e) => {
+                setSeason(Number(e.target.value));
+                setStatus("idle");
+                setMessage("");
+                setError("");
+              }}
               disabled={loading || radarLoading}
               className="border rounded px-3 py-2"
             >
@@ -253,11 +254,12 @@ export default function AdminProcessResultsPage() {
 
             <select
               value={week}
-              onChange={(e) =>
-                setWeek(
-                  Number(e.target.value)
-                )
-              }
+              onChange={(e) => {
+                setWeek(Number(e.target.value));
+                setStatus("idle");
+                setMessage("");
+                setError("");
+              }}
               disabled={loading || radarLoading}
               className="border rounded px-3 py-2"
             >

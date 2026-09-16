@@ -25,7 +25,7 @@ function ConfirmationModal({ isOpen, message, onClose }) {
 
 // Upload New Week from ESPN
 export const manualSeason = 2026;
-export const manualWeekNumber = 1; // <-- manually set the week you want
+export const manualWeekNumber = 2; // <-- manually set the week you want
 
 export default function WeeklyPicksPage() {
   
