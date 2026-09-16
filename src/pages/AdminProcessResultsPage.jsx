@@ -11,6 +11,11 @@ export default function AdminProcessResultsPage() {
   const [status, setStatus] = useState("idle");
   const [loading, setLoading] = useState(false);
 
+  const [radarLoading, setRadarLoading] = useState(false);
+  const [radarStatus, setRadarStatus] = useState("idle");
+  const [radarMessage, setRadarMessage] = useState("");
+  const [radarError, setRadarError] = useState("");
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -164,6 +169,40 @@ export default function AdminProcessResultsPage() {
     }
   };
 
+  const handleProcessRadar = async () => {
+  setRadarLoading(true);
+  setRadarStatus("processing");
+  setRadarMessage("");
+  setRadarError("");
+
+  try {
+    const { error } = await supabase.rpc(
+      "compute_radar_weekly_snapshot",
+      {
+        target_season: Number(season),
+        target_week: Number(week),
+      }
+    );
+
+    if (error) {
+      throw error;
+    }
+
+    setRadarStatus("success");
+    setRadarMessage(
+      `Season ${season}, Week ${week} League Radar processed successfully.`
+    );
+  } catch (err) {
+    setRadarStatus("error");
+    setRadarError(
+      err.message ||
+        "Unable to process League Radar."
+    );
+  } finally {
+    setRadarLoading(false);
+  }
+};
+
   const processing =
     status === "starting" ||
     status === "processing";
@@ -198,7 +237,7 @@ export default function AdminProcessResultsPage() {
                   Number(e.target.value)
                 )
               }
-              disabled={loading}
+              disabled={loading || radarLoading}
               className="border rounded px-3 py-2"
             >
               <option value={2026}>
@@ -219,7 +258,7 @@ export default function AdminProcessResultsPage() {
                   Number(e.target.value)
                 )
               }
-              disabled={loading}
+              disabled={loading || radarLoading}
               className="border rounded px-3 py-2"
             >
               {Array.from(
@@ -250,6 +289,19 @@ export default function AdminProcessResultsPage() {
         <div className="bg-red-50 border border-red-300 text-red-700 rounded-lg p-4">
           <strong>Error:</strong>{" "}
           {error}
+        </div>
+      )}
+
+      {radarMessage && (
+        <div className="bg-green-50 border border-green-300 text-green-700 rounded-lg p-4">
+          {radarMessage}
+        </div>
+      )}
+
+      {radarError && (
+        <div className="bg-red-50 border border-red-300 text-red-700 rounded-lg p-4">
+          <strong>Radar Error:</strong>{" "}
+          {radarError}
         </div>
       )}
 
@@ -292,7 +344,7 @@ export default function AdminProcessResultsPage() {
 
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3">
 
         <button
           type="button"
@@ -305,6 +357,21 @@ export default function AdminProcessResultsPage() {
             : status === "processing"
             ? "Processing..."
             : "Process Results"}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleProcessRadar}
+          disabled={
+            loading ||
+            radarLoading ||
+            status !== "success"
+          }
+          className="bg-gray-700 text-white px-6 py-3 rounded hover:bg-gray-800 disabled:opacity-50"
+        >
+          {radarLoading
+            ? "Processing Radar..."
+            : "Process League Radar"}
         </button>
 
       </div>

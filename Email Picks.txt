@@ -1,0 +1,71 @@
+{
+  "401872656": "Seattle Seahawks",
+  "401872657": "Los Angeles Rams",
+  "401872658": "Pittsburgh Steelers",
+  "401872659": "Indianapolis Colts",
+  "401872660": "Houston Texans",
+  "401872661": "Chicago Bears",
+  "401872922": "Jacksonville Jaguars",
+  "401872923": "Detroit Lions",
+  "401872924": "Tennessee Titans",
+  "401872925": "Tampa Bay Buccaneers",
+  "401872926": "Arizona Cardinals",
+  "401872927": "Minnesota Vikings",
+  "401872928": "Las Vegas Raiders",
+  "401872929": "Philadelphia Eagles",
+  "401872930": "Dallas Cowboys",
+  "401872931": "Denver Broncos"
+}
+
+{
+  "401872656": "Seattle Seahawks",
+  "401872657": "Los Angeles Rams",
+  "401872658": "Pittsburgh Steelers",
+  "401872659": "Baltimore Ravens",
+  "401872660": "Houston Texans",
+  "401872661": "Chicago Bears",
+  
+  "401872923": "New Orleans Saints",
+  "401872924": "New York Jets",
+  
+  "401872926": "Los Angeles Chargers",
+  "401872927": "Green Bay Packers",
+  "401872928": "Las Vegas Raiders",
+  "401872929": "Philadelphia Eagles",
+  "401872930": "Dallas Cowboys",
+  "401872931": "Denver Broncos"
+}
+
+{
+  "401872661": "Chicago Bears",
+  "401872659": "Baltimore Ravens",
+  "401872658": "Atlanta Falcons",
+  "401872922": "Jacksonville Jaguars",
+  "401872925": "Cincinnati Bengals",
+  "401872924": "New York Jets",
+  "401872923": "Detroit Lions",
+  "401772922": "Buffalo Bills"
+
+  "401872925": "Tampa Bay Buccaneers",
+  "401872923": "New Orleans Saints",
+  "401872924": "Tennessee Titans",
+  
+  "401872658": "Pittsburgh Steelers",
+  "401872661": "Chicago Bears",
+  "401772633": "Cleveland Browns",
+  
+  "401872927": "Minnesota Vikings",
+  "401872929": "Philadelphia Eagles",
+  "401872930": "Dallas Cowboys",
+  
+
+  
+  
+  
+
+
+
+
+
+
+
