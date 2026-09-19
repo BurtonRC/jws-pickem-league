@@ -417,8 +417,16 @@ export default function WeeklyPicksPage() {
           "Error fetching survivor picks:",
           error
         );
-      } else {
+            } else {
         setSurvivorPicks(data);
+
+        const hasLost = (data || []).some(
+          (pick) =>
+            pick.week < manualWeekNumber &&
+            pick.result === "loss"
+        );
+
+        setSurvivorLost(hasLost);
       }
     }
 
