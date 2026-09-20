@@ -2435,16 +2435,16 @@ export default function LeagueRadarPage() {
   const [error, setError] = useState(null);
 
   const earnedAchievements = useMemo(() => {
-  const earned = {};
+    const earned = {};
 
-  ACHIEVEMENT_SHELF.forEach((achievement) => {
-    earned[achievement.flag] = profileHistory.some(
-      (week) => Boolean(week[achievement.flag])
-    );
-  });
+    ACHIEVEMENT_SHELF.forEach((achievement) => {
+      earned[achievement.flag] = profileHistory.filter(
+        (week) => Boolean(week[achievement.flag])
+      ).length;
+    });
 
-  return earned;
-}, [profileHistory]);
+    return earned;
+  }, [profileHistory]);
 
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [selectedArchetype, setSelectedArchetype] = useState(null);
@@ -2931,28 +2931,28 @@ export default function LeagueRadarPage() {
                       </button>
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
-                                              {ACHIEVEMENT_SHELF.map((achievement) => {
-                                                const earned = Boolean(earnedAchievements[achievement.flag]);
+                        {ACHIEVEMENT_SHELF.map((achievement) => {
+                          const earned = Boolean(earnedAchievements[achievement.flag]);
 
-                                                return (
-                                                  <div
-                                                    key={achievement.type}
-                                                    title={earned ? achievement.type : "Not yet earned"}
-                                                    className="flex h-8 w-8 shrink-0 items-center justify-center"
-                                                  >
-                                                    <img
-                                                      src={achievement.image}
-                                                      alt=""
-                                                      className={`h-full w-full object-contain transition ${
-                                                        earned
-                                                          ? ""
-                                                          : "grayscale brightness-[0.65] opacity-55"
-                                                      }`}
-                                                    />
-                                                  </div>
-                                                );
-                                              })}
-                                            </div>
+                          return (
+                            <div
+                              key={achievement.type}
+                              title={earned ? achievement.type : "Not yet earned"}
+                              className="flex h-8 w-8 shrink-0 items-center justify-center"
+                            >
+                              <img
+                                src={achievement.image}
+                                alt=""
+                                className={`h-full w-full object-contain transition ${
+                                  earned
+                                    ? ""
+                                    : "grayscale brightness-[0.65] opacity-55"
+                                }`}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
 
                         {/* HISTORY */}
@@ -3129,25 +3129,37 @@ export default function LeagueRadarPage() {
 
                         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
                           {ACHIEVEMENT_SHELF.map((achievement) => {
-                            const earned = Boolean(earnedAchievements[achievement.flag]);
+                            const earnedCount = earnedAchievements[achievement.flag] || 0;
 
-                            return (
-                              <div
-                                key={achievement.type}
-                                title={earned ? achievement.type : "Not yet earned"}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center"
-                              >
-                                <img
-                                  src={achievement.image}
-                                  alt=""
-                                  className={`h-full w-full object-contain transition ${
-                                    earned
-                                      ? ""
-                                      : "grayscale brightness-[0.65] opacity-55"
-                                  }`}
-                                />
-                              </div>
-                            );
+                              return (
+                                <div
+                                  key={achievement.type}
+                                  title={
+                                    earnedCount > 0
+                                      ? `${achievement.type} — earned ${earnedCount} ${
+                                          earnedCount === 1 ? "time" : "times"
+                                        }`
+                                      : "Not yet earned"
+                                  }
+                                  className="relative flex h-8 w-8 shrink-0 items-center justify-center"
+                                >
+                                  <img
+                                    src={achievement.image}
+                                    alt=""
+                                    className={`h-full w-full object-contain transition ${
+                                      earnedCount > 0
+                                        ? ""
+                                        : "grayscale brightness-[0.65] opacity-55"
+                                    }`}
+                                  />
+
+                                  {earnedCount >= 2 && (
+                                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold leading-none text-white">
+                                      {earnedCount}
+                                    </span>
+                                  )}
+                                </div>
+                              );
                           })}
                         </div>
                       </div>
