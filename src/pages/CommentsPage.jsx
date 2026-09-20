@@ -91,10 +91,10 @@ function isThisWeek(ts) {
   // Calendar week: Monday through Sunday, using the browser's local time.
   const start = new Date(now);
   const day = start.getDay();
-  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  const daysSinceWednesday = (day + 7 - 3) % 7;
 
   start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - daysSinceMonday);
+  start.setDate(start.getDate() - daysSinceWednesday);
 
   const end = new Date(start);
   end.setDate(end.getDate() + 7);
@@ -177,25 +177,47 @@ function ReactionButtons({ comment, onReact }) {
     ["wow", "😮"],
   ];
 
+  const [openReaction, setOpenReaction] = useState(null);
+
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {reactions.map(([type, icon]) => {
         const isActive = comment.userReaction === type;
+        const users = comment.reactionUsers?.[type] || [];
 
         return (
-          <button
+          <div
             key={type}
-            type="button"
-            onClick={() => onReact(comment.id, type)}
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-5 transition ${
-              isActive
-                ? "border-blue-400 bg-blue-50 text-blue-700"
-                : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-600"
-            }`}
+            className="relative"
+            onMouseEnter={() => {
+              if (users.length > 0) setOpenReaction(type);
+            }}
+            onMouseLeave={() => setOpenReaction(null)}
           >
-            <span className="text-[12px] leading-none">{icon}</span>
-            <span>{comment.reactionCounts?.[type] ?? 0}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+
+                onReact(comment.id, type);
+                setOpenReaction(type);
+
+              }}
+              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-5 transition ${
+                isActive
+                  ? "border-blue-400 bg-blue-50 text-blue-700"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-600"
+              }`}
+            >
+              <span className="text-[12px] leading-none">{icon}</span>
+              <span>{comment.reactionCounts?.[type] ?? 0}</span>
+            </button>
+
+            {openReaction === type && users.length > 0 && (
+              <div className="absolute bottom-full left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[#102333] px-3 py-2 text-xs text-white shadow-lg">
+                {users.join(", ")}
+              </div>
+            )}
+          </div>
         );
       })}
     </div>
@@ -242,6 +264,7 @@ export default function CommentsPage({ user }) {
   } = useComments();
 
   const [newComment, setNewComment] = useState("");
+  const [postingComment, setPostingComment] = useState(false);
   const [replyingCommentId, setReplyingCommentId] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [expandedCommentIds, setExpandedCommentIds] = useState(
@@ -353,10 +376,16 @@ export default function CommentsPage({ user }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || postingComment) return;
 
-    await addComment(user.id, newComment.trim());
-    setNewComment("");
+    setPostingComment(true);
+
+    try {
+      await addComment(user.id, newComment.trim());
+      setNewComment("");
+    } finally {
+      setPostingComment(false);
+    }
   };
 
   const handleReplySubmit = async (e, parentId) => {
@@ -370,6 +399,13 @@ export default function CommentsPage({ user }) {
   };
 
   const handleReact = async (commentId, reactionType) => {
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", user.id)
+        .single();
+
+      const currentUsername = currentProfile?.username;
     updateComment(commentId, (comment) => {
       const newCounts = { ...comment.reactionCounts };
       let newReaction = reactionType;
@@ -396,10 +432,32 @@ export default function CommentsPage({ user }) {
           (newCounts[reactionType] || 0) + 1;
       }
 
+            const newReactionUsers = {
+        ...(comment.reactionUsers || {}),
+      };
+
+      if (comment.userReaction) {
+        newReactionUsers[comment.userReaction] = (
+          newReactionUsers[comment.userReaction] || []
+        ).filter(
+          (username) => username !== currentUsername
+        );
+      }
+
+      if (newReaction) {
+        newReactionUsers[newReaction] = [
+          ...(newReactionUsers[newReaction] || []).filter(
+            (username) => username !== currentUsername
+          ),
+          currentUsername,
+        ];
+      }
+
       return {
         ...comment,
         userReaction: newReaction,
         reactionCounts: newCounts,
+        reactionUsers: newReactionUsers,
       };
     });
 
@@ -649,7 +707,7 @@ export default function CommentsPage({ user }) {
           <div className="flex min-w-0 items-start gap-3">
             
             <div className="min-w-0">
-              <h2 className="text-2xl font-extrabold tracking-tight text-[#102333] sm:text-3xl">
+              <h2 className="text-2xl font-bold tracking-tight text-[#102333] sm:text-3xl">
                 Comments
               </h2>
 
@@ -682,7 +740,7 @@ export default function CommentsPage({ user }) {
                   <div className="text-[9px] font-bold uppercase tracking-wide text-[#728797]">
                     Total Comments
                   </div>
-                  <div className="mt-1 text-2xl font-extrabold text-[#102333]">
+                  <div className="mt-1 text-2xl font-bold text-[#102333]">
                     {totalComments}
                   </div>
                 </div>
@@ -691,7 +749,7 @@ export default function CommentsPage({ user }) {
                   <div className="text-[9px] font-bold uppercase tracking-wide text-[#728797]">
                     Posts This <br></br> Week
                   </div>
-                  <div className="mt-1 text-2xl font-extrabold text-[#102333]">
+                  <div className="mt-1 text-2xl font-bold text-[#102333]">
                     {postsThisWeek}
                   </div>
                 </div>
@@ -701,7 +759,7 @@ export default function CommentsPage({ user }) {
                     Top Poster
                   </div>
 
-                  <div className="mt-1 whitespace-normal break-words text-sm font-extrabold leading-tight text-[#102333]">
+                  <div className="mt-1 whitespace-normal break-words text-sm font-bold leading-tight text-[#102333]">
                     {topPoster?.username || "—"}
                   </div>
 
@@ -745,7 +803,7 @@ export default function CommentsPage({ user }) {
 
                 <button
                   type="submit"
-                  disabled={!newComment.trim()}
+                  disabled={!newComment.trim() || postingComment}
                   className="shrink-0 rounded-lg bg-[#1769e8] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Post

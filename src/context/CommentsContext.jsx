@@ -78,7 +78,7 @@ export function CommentsProvider({ children }) {
     // Fetch all reactions for these comments
     const { data: reactionData, error: reactionError } = await supabase
       .from("comment_reactions")
-      .select("comment_id, reaction_type")
+      .select("comment_id, reaction_type, user_id")
       .in("comment_id", commentIds);
 
     if (reactionError) {
@@ -91,6 +91,48 @@ export function CommentsProvider({ children }) {
       countsMap[r.comment_id] = countsMap[r.comment_id] || {};
       countsMap[r.comment_id][r.reaction_type] =
         (countsMap[r.comment_id][r.reaction_type] || 0) + 1;
+    });
+
+    const reactionUserIds = [
+      ...new Set((reactionData || []).map((r) => r.user_id).filter(Boolean)),
+    ];
+
+    let reactionProfiles = [];
+
+    if (reactionUserIds.length > 0) {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, username")
+        .in("id", reactionUserIds);
+
+      if (profileError) {
+        console.error("Error fetching reaction usernames:", profileError);
+      } else {
+        reactionProfiles = profileData || [];
+      }
+    }
+
+    const profileMap = {};
+    reactionProfiles.forEach((profile) => {
+      profileMap[profile.id] = profile.username;
+    });
+
+    const usersMap = {};
+
+    (reactionData || []).forEach((r) => {
+      if (!usersMap[r.comment_id]) {
+        usersMap[r.comment_id] = {};
+      }
+
+      if (!usersMap[r.comment_id][r.reaction_type]) {
+        usersMap[r.comment_id][r.reaction_type] = [];
+      }
+
+      const username = profileMap[r.user_id];
+
+      if (username) {
+        usersMap[r.comment_id][r.reaction_type].push(username);
+      }
     });
 
     // Get current user's reactions
@@ -113,13 +155,16 @@ export function CommentsProvider({ children }) {
     // Merge counts + userReaction into each comment
     return baseComments.map((c) => {
       const counts = countsMap[c.id] || {};
-      const userReaction = userReactions.find((ur) => ur.comment_id === c.id);
+      const reactionUsers = usersMap[c.id] || {};
+      const userReaction = userReactions.find(
+        (ur) => ur.comment_id === c.id
+      );
 
       return {
         ...c,
         reactionCounts: counts,
+        reactionUsers,
         userReaction: userReaction?.reaction_type ?? null,
-        // Keep replies array for your replies system
         replies: [],
       };
     });
