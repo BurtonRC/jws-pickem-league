@@ -2975,7 +2975,7 @@ export default function LeagueRadarPage() {
                     ) : (
                     <>
                       {/* IDENTITY */}
-                      <div className="grid grid-cols-[56px_minmax(0,1fr)_70px] items-center gap-3 rounded-lg border border-[#164b60] bg-[#041d29] p-3 sm:grid-cols-[64px_minmax(0,1fr)_80px]">
+                      <div className="grid grid-cols-[56px_minmax(0,1fr)_50px] items-center gap-3 rounded-lg border border-[#164b60] bg-[#041d29] p-3 sm:grid-cols-[64px_minmax(0,1fr)_155px]">
                         <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-cyan-400 bg-[#087f9d] text-base font-semibold text-white sm:h-16 sm:w-16 sm:text-lg">
                           {getInitials(
                             profile.username
@@ -2983,15 +2983,13 @@ export default function LeagueRadarPage() {
                         </div>
 
                         <div className="min-w-0">
-                          <div className="truncate text-base font-semibold text-white sm:text-lg">
+                          <div className="break-words text-base font-semibold text-white sm:text-lg">
                             {profile.username}
                           </div>
 
-                         <div className="mt-1 min-w-0 text-xs text-cyan-300 sm:text-sm">
-                          <span className="truncate">
-                            {profile.primary_label ||
-                            "LEAGUE RADAR PROFILE"}
-                          </span>
+                         <div className="mt-1 min-w-0 break-words text-xs text-cyan-300 sm:text-sm">
+                          {profile.primary_label ||
+                          "LEAGUE RADAR PROFILE"}
                         </div>
 
                         {(() => {
