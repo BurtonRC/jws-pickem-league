@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
-import { manualWeekNumber } from "./pages/WeeklyPicksPage";
+
 import { CommentsProvider } from "./context/CommentsContext";
 
 import AdminDashboard from "./pages/AdminDashboard";
@@ -207,7 +207,7 @@ export default function App() {
           element={
             user ? (
               <MainLayout loggedIn={!!user} onLogout={handleLogout} user={user} isAdmin={isAdmin}>
-                <PicksBoard weekNumber={manualWeekNumber} />
+                <PicksBoard />
               </MainLayout>
             ) : (
               <Navigate to="/login" replace />

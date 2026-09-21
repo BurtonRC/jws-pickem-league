@@ -27,7 +27,7 @@ export default function AdminPage() {
     try {
       const url =
       `https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` +
-      `?year=${season}&seasontype=2&week=${week}`;
+      `?year=${selectedSeason}&seasontype=2&week=${selectedWeek}`;
 
       console.log(
         "ADMIN LOAD:",
@@ -335,6 +335,8 @@ const handlePSTeamChange = (gameId, value) => {
                   game.game_id
                 ),
 
+                updated_at: new Date().toISOString(),
+
               drive_by_enabled:
                 Boolean(
                   item?.drive_by_enabled
@@ -425,7 +427,7 @@ const handlePSTeamChange = (gameId, value) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 pb-24">
 
       <div>
         <PageHeader>
@@ -462,10 +464,6 @@ const handlePSTeamChange = (gameId, value) => {
           >
             <option value={2026}>
               2026
-            </option>
-
-            <option value={2025}>
-              2025
             </option>
           </select>
         </div>

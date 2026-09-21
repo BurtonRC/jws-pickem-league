@@ -949,7 +949,7 @@ editorProps: {
 
     `}</style>
 
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 pb-24">
 
       <div>
         <div className="flex items-center gap-3">
@@ -1006,9 +1006,6 @@ editorProps: {
                   2026
                 </option>
 
-                <option value={2025}>
-                  2025
-                </option>
               </select>
             </div>
 

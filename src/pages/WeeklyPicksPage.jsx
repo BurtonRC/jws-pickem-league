@@ -23,10 +23,6 @@ function ConfirmationModal({ isOpen, message, onClose }) {
   );
 }
 
-// Upload New Week from ESPN
-export const manualSeason = 2026;
-export const manualWeekNumber = 2; // <-- manually set the week you want
-
 export default function WeeklyPicksPage() {
   
   // Core selection state (unchanged)
@@ -62,6 +58,8 @@ export default function WeeklyPicksPage() {
   const [currentWeek, setCurrentWeek] = useState(null);
   const [games, setGames] = useState([]);
   const [allTeams, setAllTeams] = useState([]);
+  const [activeSeason, setActiveSeason] = useState(null);
+  const [activeWeekNumber, setActiveWeekNumber] = useState(null);
 
   // Track Drive-By (DB) picks separately
   const [DBs, setDBs] = useState({});
@@ -109,7 +107,7 @@ export default function WeeklyPicksPage() {
     survivorPicks
       .filter(
         (pick) =>
-          pick.season === manualSeason &&
+          pick.season === activeSeason &&
           pick.week < currentWeek.weekNumber &&
           pick.team
       )
@@ -118,23 +116,47 @@ export default function WeeklyPicksPage() {
       });
 
     return map;
-  }, [survivorPicks, currentWeek]);
+  }, [survivorPicks, currentWeek, activeSeason]);
 
 
   useEffect(() => {
-    const fetchWeekGames = async () => {
+  const fetchWeekGames = async () => {
+    try {
+      // Find the most recently saved Week Setup
+      const { data: latestConfig, error: latestConfigError } =
+        await supabase
+          .from("league_game_config")
+          .select("season, week, updated_at")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+      if (latestConfigError) {
+        throw latestConfigError;
+      }
+
+      if (!latestConfig) {
+        console.error("No saved league game configuration found.");
+        return;
+      }
+
+      const season = latestConfig.season;
+      const week = latestConfig.week;
+
+      setActiveSeason(season);
+      setActiveWeekNumber(week);
+
       console.log(
         "Fetching schedule:",
         "season:",
-        manualSeason,
+        season,
         "week:",
-        manualWeekNumber
+        week
       );
 
-      try {
-        // ---- Fetch current-season ESPN schedule ----
+      // ---- Fetch current-season ESPN schedule ----
         const resWeek = await fetch(
-          `https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?year=${manualSeason}&seasontype=2&week=${manualWeekNumber}`
+          `https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?year=${season}&seasontype=2&week=${week}`
         );
 
         if (!resWeek.ok) {
@@ -253,8 +275,8 @@ export default function WeeklyPicksPage() {
             .select(
               "game_id, drive_by_enabled, drive_by_team, ps_game_of_week, ps_team, spread"
             )
-            .eq("season", manualSeason)
-            .eq("week", manualWeekNumber);
+            .eq("season", season)
+            .eq("week", week);
 
         if (configError) {
           console.error(
@@ -301,8 +323,8 @@ export default function WeeklyPicksPage() {
         setAllTeams(teams);
 
         setCurrentWeek({
-          season: manualSeason,
-          weekNumber: manualWeekNumber,
+          season,
+          weekNumber: week,
         });
 
       } catch (err) {
@@ -337,14 +359,14 @@ export default function WeeklyPicksPage() {
     // Restore previously submitted picks when returning to the page
   useEffect(() => {
     const fetchExistingPicks = async () => {
-      if (!user) return;
+      if (!user || !activeSeason || !activeWeekNumber) return;
 
       const { data, error } = await supabase
         .from("weekly_picks")
         .select("*")
         .eq("user_id", user.id)
-        .eq("season", manualSeason)
-        .eq("week", manualWeekNumber)
+        .eq("season", activeSeason)
+        .eq("week", activeWeekNumber)
         .maybeSingle();
 
       if (error) {
@@ -399,18 +421,18 @@ export default function WeeklyPicksPage() {
     };
 
     fetchExistingPicks();
-  }, [user, games]);
+  }, [user, games, activeSeason, activeWeekNumber]);
 
   // Fetch all past survivor picks for this user
   useEffect(() => {
     async function fetchSurvivorPicks() {
-      if (!user) return;
+      if (!user || !activeSeason || !activeWeekNumber) return;
 
       const { data, error } = await supabase
         .from("survivor_picks")
         .select("*")
         .eq("user_id", user.id)
-        .eq("season", manualSeason);
+        .eq("season", activeSeason);
 
       if (error) {
         console.error(
@@ -422,7 +444,7 @@ export default function WeeklyPicksPage() {
 
         const hasLost = (data || []).some(
           (pick) =>
-            pick.week < manualWeekNumber &&
+            pick.week < activeWeekNumber &&
             pick.result === "loss"
         );
 
@@ -431,7 +453,7 @@ export default function WeeklyPicksPage() {
     }
 
     fetchSurvivorPicks();
-  }, [user]);
+  }, [user, activeSeason, activeWeekNumber]);
 
 
   // ------------------------------
@@ -691,8 +713,8 @@ const DBToggle = (
     
 
     const payload = {
-      season: manualSeason,
-      week: manualWeekNumber,
+      season: activeSeason,
+      week: activeWeekNumber,
       picks: selectedTeams,
       dbs: DBs,
       point_spreads: pointSpreadSelection,
@@ -779,8 +801,8 @@ const DBToggle = (
     }
 
     const payload = {
-      season: manualSeason,
-      week: manualWeekNumber,
+      season: activeSeason,
+      week: activeWeekNumber,
       picks: selectedTeams,
       dbs: DBs,
       point_spreads: pointSpreadSelection,
@@ -827,8 +849,8 @@ const DBToggle = (
                 user.user_metadata?.username ||
                 user.email ||
                 "Unknown",
-              season: manualSeason,
-              week: manualWeekNumber,
+              season: activeSeason,
+              week: activeWeekNumber,
               team: survivorPick,
               result: null,
             },
@@ -929,7 +951,7 @@ const DBToggle = (
       <div className="w-full max-w-5xl mx-auto space-y-4">
 
         <PageHeader>
-          {manualSeason} &nbsp;&nbsp; Week {currentWeek.weekNumber}
+          {currentWeek.season} &nbsp;&nbsp; Week {currentWeek.weekNumber}
         </PageHeader>
 
         {/* ===== DESKTOP TABLE ===== */}
