@@ -1734,24 +1734,33 @@ if (player.contrarian) {
   });
 }
 
-  if (player.biggest_upset) {
-    const count = Number(
-      player.biggest_upset_count || 0
-    );
+if (player.biggest_upset) {
+  const count = Number(
+    player.biggest_upset_count || 0
+  );
 
-    items.push({
-      type: "BIGGEST UPSET",
-      
-      description:
-        count > 0
+  const upsetGame =
+    Array.isArray(player.biggest_upset_games) &&
+    player.biggest_upset_games.length > 0
+      ? player.biggest_upset_games[0]
+      : null;
+
+  items.push({
+    type: "BIGGEST UPSET",
+
+    description:
+      upsetGame
+        ? `${upsetGame.away_team} ${upsetGame.away_score} – ${upsetGame.home_score} ${upsetGame.home_team} · Only ${upsetGame.picked_winner} of ${upsetGame.total_picks} picked ${upsetGame.winner}`
+        : count > 0
           ? `${count} ${
               count === 1 ? "upset pick" : "upset picks"
             } this week.`
           : "Delivered the week's biggest upset.",
-      value: `#${player.league_rank}`,
-      sort: 8,
-    });
-  }
+
+    value: `#${player.league_rank}`,
+    sort: 8,
+  });
+}
 
   return items.sort((a, b) => a.sort - b.sort);
 }
@@ -2419,6 +2428,133 @@ function PlayerModal({
    MAIN PAGE
 ============================================================ */
 
+async function enrichBiggestUpsets(rows) {
+  if (!rows?.length) return rows || [];
+
+  const upsetGames = [];
+
+  rows.forEach((player) => {
+    if (!Array.isArray(player.biggest_upset_games)) return;
+
+    player.biggest_upset_games.forEach((game) => {
+      if (game?.game_id) {
+        upsetGames.push({
+          ...game,
+          user_id: player.user_id,
+        });
+      }
+    });
+  });
+
+  if (!upsetGames.length) return rows;
+
+  const gameIds = [
+    ...new Set(upsetGames.map((game) => game.game_id)),
+  ];
+
+  const season = rows[0].season;
+  const week = rows[0].week;
+
+  const {
+    data: gameResults,
+    error: gameError,
+  } = await supabase
+    .from("game_results")
+    .select(
+      "game_id, home_team, away_team, winner, home_score, away_score"
+    )
+    .eq("season", season)
+    .eq("week", week)
+    .in("game_id", gameIds);
+
+  if (gameError) throw gameError;
+
+  const {
+    data: weeklyPicks,
+    error: picksError,
+  } = await supabase
+    .from("weekly_picks")
+    .select("picks")
+    .eq("season", season)
+    .eq("week", week);
+
+  if (picksError) throw picksError;
+
+  const gameMap = new Map(
+    (gameResults || []).map((game) => [
+      String(game.game_id),
+      game,
+    ])
+  );
+
+  const pickCounts = new Map();
+
+  gameIds.forEach((gameId) => {
+    const game = gameMap.get(String(gameId));
+
+    if (!game) return;
+
+    let pickedWinner = 0;
+    let totalPicks = 0;
+
+    (weeklyPicks || []).forEach((row) => {
+      const picks = row?.picks || {};
+      const pick = picks[String(gameId)];
+
+      if (pick !== undefined && pick !== null && pick !== "") {
+        totalPicks += 1;
+
+        if (pick === game.winner) {
+          pickedWinner += 1;
+        }
+      }
+    });
+
+    pickCounts.set(String(gameId), {
+      pickedWinner,
+      totalPicks,
+    });
+  });
+
+  return rows.map((player) => {
+    if (!Array.isArray(player.biggest_upset_games)) {
+      return player;
+    }
+
+    return {
+      ...player,
+      biggest_upset_games: player.biggest_upset_games.map(
+        (upset) => {
+          const game = gameMap.get(
+            String(upset.game_id)
+          );
+
+          const counts = pickCounts.get(
+            String(upset.game_id)
+          );
+
+          if (!game) return upset;
+
+          return {
+            ...upset,
+
+            home_team: game.home_team,
+            away_team: game.away_team,
+            home_score: game.home_score,
+            away_score: game.away_score,
+
+            picked_winner:
+              counts?.pickedWinner ?? null,
+
+            total_picks:
+              counts?.totalPicks ?? null,
+          };
+        }
+      ),
+    };
+  });
+}
+
 export default function LeagueRadarPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -2561,7 +2697,12 @@ export default function LeagueRadarPage() {
 
         if (!mounted) return;
 
-        setRadarData(currentWeekData || []);
+          const enrichedRadarData =
+            await enrichBiggestUpsets(currentWeekData || []);
+
+          if (!mounted) return;
+
+          setRadarData(enrichedRadarData);
 
 
         /* --------------------------------------------------------
@@ -2673,7 +2814,10 @@ export default function LeagueRadarPage() {
 
       if (radarError) throw radarError;
 
-      setRadarData(currentWeekData || []);
+      const enrichedRadarData =
+      await enrichBiggestUpsets(currentWeekData || []);
+
+      setRadarData(enrichedRadarData);
       setWeek(targetWeek);
     } catch (err) {
       console.error("League Radar week load failed:", err);
@@ -3390,6 +3534,7 @@ export default function LeagueRadarPage() {
 
                               <div className="mt-0.5 text-[9px] leading-4 text-cyan-100/70">
                               {(() => {
+
                                 const highlightSituation =
                                   highlight.type === "HOT WEEK"
                                     ? "HOT HAND"
@@ -3400,6 +3545,10 @@ export default function LeagueRadarPage() {
                                   "highlight",
                                   highlightSituation
                                 );
+
+                                if (highlight.type === "BIGGEST UPSET") {
+                                  return highlight.description;
+                                }
 
                                 return highlightDialogue
                                   ? typeof highlightDialogue === "object"
