@@ -2754,12 +2754,12 @@ export default function LeagueRadarPage() {
           availableWeeks[availableWeeks.indexOf(week) - 1]
         )
       }
-      className="flex h-8 w-8 items-center justify-center -translate-y-px text-lg font-semibold text-gray-600 hover:text-gray-900 disabled:opacity-30"
+      className="flex h-4 w-5 items-center justify-center rounded-md border border-gray-400 text-lg font-semibold text-gray-600 hover:border-gray-500 hover:text-gray-900 disabled:opacity-30"
     >
-      ‹
+      <span className="-translate-y-px">‹</span>
     </button>
 
-    <span className="px-1 font-medium text-gray-600">
+    <span className="px-2 font-medium text-gray-600">
       Week {week}
     </span>
 
@@ -2775,10 +2775,15 @@ export default function LeagueRadarPage() {
           availableWeeks[availableWeeks.indexOf(week) + 1]
         )
       }
-      className="flex h-8 w-8 items-center justify-center -translate-y-px text-lg font-semibold text-gray-600 hover:text-gray-900 disabled:opacity-30"
+      className="flex h-4 w-5 items-center justify-center rounded-md border border-gray-400 text-lg font-semibold text-gray-600 hover:border-gray-500 hover:text-gray-900 disabled:opacity-30"
     >
-      ›
+      <span className="-translate-y-px">›</span>
     </button>
+
+      <span className="ml-4 text-sm font-bold text-gray-500">
+  ← Click arrows to change week no.
+</span>
+
   </div>
 </div>
                     )}
