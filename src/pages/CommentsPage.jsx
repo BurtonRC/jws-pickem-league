@@ -521,7 +521,7 @@ export default function CommentsPage({ user }) {
     });
   };
 
-  const renderComment = (comment, isReply = false) => {
+  const renderComment = (comment, isReply = false, depth = 0) => {
     const isRadar = Boolean(
       comment.radar_player_user_id && comment.radar_season
     );
@@ -534,7 +534,9 @@ export default function CommentsPage({ user }) {
         key={comment.id}
         className={`relative ${
           isReply
-            ? "ml-8 border-l-2 border-slate-200 pl-4 sm:ml-12"
+            ? depth === 1
+              ? "ml-4 border-l-2 border-slate-200 pl-3 sm:ml-12 sm:pl-4"
+              : "-ml-4 border-l-2 border-slate-200 pl-3 sm:ml-12 sm:pl-4"
             : ""
         }`}
       >
@@ -692,7 +694,7 @@ export default function CommentsPage({ user }) {
           expandedCommentIds.has(comment.id) && (
             <div className="mt-2 space-y-2">
               {comment.replies.map((reply) =>
-                renderComment(reply, true)
+                renderComment(reply, true, depth + 1)
               )}
             </div>
           )}

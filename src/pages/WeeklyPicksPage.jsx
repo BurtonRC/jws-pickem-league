@@ -794,8 +794,20 @@ const DBToggle = (
     setConfirmOpen(true);
   };
 
-const onSubmitInternational = async () => {
+  const onSubmitInternational = async () => {
   setWarnMessages([]);
+
+    const missingFirst = games
+    .filter(isFirstSubmitGame)
+    .filter((g) => !selectedTeams[g.id]);
+
+  if (missingFirst.length > 0) {
+    setWarnMessages([
+      "Please make your early game picks before submitting the International game."
+    ]);
+    setWarnOpen(true);
+    return;
+  }
 
   const missing = games
     .filter(isInternationalGame)
