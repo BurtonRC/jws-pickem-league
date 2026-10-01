@@ -30,12 +30,14 @@ export default function WeeklyPicksPage() {
   const [sliderOn, setSliderOn] = useState({});
   const [pointSpreadSelection, setPointSpreadSelection] = useState({});
 
-  // Two-phase submission locks
+  // Three submission locks
   const [submittedFirst, setSubmittedFirst] = useState(false);
+  const [submittedInternational, setSubmittedInternational] = useState(false);
   const [submittedSecond, setSubmittedSecond] = useState(false);
 
-  // Two countdown strings, shown inline with their submit areas
+  // Three countdown strings
   const [timeFirst, setTimeFirst] = useState(null);
+  const [timeInternational, setTimeInternational] = useState(null);
   const [timeSecond, setTimeSecond] = useState(null);
 
   // Survivor
@@ -67,29 +69,17 @@ export default function WeeklyPicksPage() {
   // One-off: lock specific game(s) in the second submit
   const secondSubmitLockedGames = ["401772953"]; // <-- use the game ID(s) to lock
 
-  // Helper: determine if a game is in the first submit group (Thu–Sat + early international)
+  // Helper: determine submission group
   const isFirstSubmitGame = (game) => {
-    // 1. Always Thu / Fri / Sat
-    if (["Wed", "Thu", "Fri", "Sat"].includes(game.day)) return true;
+    return ["Wed", "Thu", "Fri", "Sat"].includes(game.day);
+  };
 
-    // 2. Include early international games (before 12:00 ET)
-    const kickoff = new Date(game.kickoffUTC || game.kickoff);
-    const hourET = (kickoff.getUTCHours() - 4 + 24) % 24; // UTC → Eastern
-    if (hourET < 12) return true;
+  const isInternationalGame = (game) => {
+    return game.day === "Sun Intl";
+  };
 
-    // 3. Fallback for known locations
-    return [
-      "London",
-      "Germany",
-      "Frankfurt",
-      "Tottenham",
-      "Wembley",
-      "Munich",
-      "Mexico",
-      "Brazil",
-      "Sao Paulo",
-      "Madrid",
-    ].some((loc) => (game.location || "").includes(loc));
+  const isSecondSubmitGame = (game) => {
+    return !isFirstSubmitGame(game) && !isInternationalGame(game);
   };
 
   // Helper: check if a game's kickoff has already passed
@@ -251,7 +241,7 @@ export default function WeeklyPicksPage() {
           const displayDay = internationalLocations.some((loc) =>
             location.includes(loc)
           )
-            ? `${day} Intl ${location}`
+            ? `${day} ${location}`
             : day;
 
           return {
@@ -394,17 +384,25 @@ export default function WeeklyPicksPage() {
       // been saved.
       const savedPicks = data.picks || {};
 
-      const firstGames = games.filter(
-        isFirstSubmitGame
+      const firstGames = games.filter(isFirstSubmitGame);
+
+      const internationalGames = games.filter(
+        isInternationalGame
       );
 
       const secondGames = games.filter(
-        (game) => !isFirstSubmitGame(game)
+        isSecondSubmitGame
       );
 
       const firstComplete =
         firstGames.length > 0 &&
         firstGames.every(
+          (game) => savedPicks[game.id]
+        );
+
+      const internationalComplete =
+        internationalGames.length > 0 &&
+        internationalGames.every(
           (game) => savedPicks[game.id]
         );
 
@@ -415,8 +413,16 @@ export default function WeeklyPicksPage() {
         );
 
       setSubmittedFirst(firstComplete);
+
+      setSubmittedInternational(
+        internationalGames.length === 0 ||
+        internationalComplete
+      );
+
       setSubmittedSecond(
-        firstComplete && secondComplete
+        (firstGames.length === 0 || firstComplete) &&
+        (internationalGames.length === 0 || internationalComplete) &&
+        (secondGames.length === 0 || secondComplete)
       );
     };
 
@@ -474,9 +480,25 @@ export default function WeeklyPicksPage() {
     );
   }, [games]);
 
+  const internationalKickoff = useMemo(() => {
+  const internationalGames = games.filter(
+    isInternationalGame
+  );
+
+  if (internationalGames.length === 0) return null;
+
+  return new Date(
+      Math.min(
+        ...internationalGames.map((g) =>
+          new Date(g.kickoffUTC).getTime()
+        )
+      )
+    );
+  }, [games]);
+
   const secondKickoff = useMemo(() => {
     const secondGames = games.filter(
-      (g) => !isFirstSubmitGame(g)
+      isSecondSubmitGame
     );
 
     if (secondGames.length === 0) return null;
@@ -537,23 +559,34 @@ export default function WeeklyPicksPage() {
         clearInterval(timerId);
     };
 
-    const cleanupFirst =
-      setupCountdown(
-        firstKickoff,
-        setTimeFirst
-      );
+const cleanupFirst =
+  setupCountdown(
+    firstKickoff,
+    setTimeFirst
+  );
 
-    const cleanupSecond =
-      setupCountdown(
-        secondKickoff,
-        setTimeSecond
-      );
+const cleanupInternational =
+  setupCountdown(
+    internationalKickoff,
+    setTimeInternational
+  );
 
-    return () => {
-      cleanupFirst();
-      cleanupSecond();
-    };
-  }, [firstKickoff, secondKickoff]);
+const cleanupSecond =
+  setupCountdown(
+    secondKickoff,
+    setTimeSecond
+  );
+
+  return () => {
+    cleanupFirst();
+    cleanupInternational();
+    cleanupSecond();
+  };
+  }, [
+    firstKickoff,
+    internationalKickoff,
+    secondKickoff,
+  ]);
 
 
   // ------------------------------
@@ -561,8 +594,12 @@ export default function WeeklyPicksPage() {
   // ------------------------------
 
   const firstLocked =
-    submittedFirst ||
-    timeFirst === "Kickoff reached!";
+  submittedFirst ||
+  timeFirst === "Kickoff reached!";
+
+  const internationalLocked =
+    submittedInternational ||
+    timeInternational === "Kickoff reached!";
 
   const secondLocked =
     submittedSecond ||
@@ -757,26 +794,79 @@ const DBToggle = (
     setConfirmOpen(true);
   };
 
-
-  const onSubmitSecond = async () => {
+const onSubmitInternational = async () => {
   setWarnMessages([]);
 
-    const missing = games
-      .filter(
-        (g) =>
-          !isFirstSubmitGame(g)
-      )
-      .filter(
-        (g) => !selectedTeams[g.id]
-      );
+  const missing = games
+    .filter(isInternationalGame)
+    .filter((g) => !selectedTeams[g.id]);
 
-    if (missing.length > 0) {
-      setWarnMessages([
-        "Please make all remaining picks before submitting."
-      ]);
-      setWarnOpen(true);
-      return;
-    }
+  if (missing.length > 0) {
+    setWarnMessages([
+      "Please make all international game picks before submitting."
+    ]);
+    setWarnOpen(true);
+    return;
+  }
+
+  const payload = {
+    season: activeSeason,
+    week: activeWeekNumber,
+    picks: selectedTeams,
+    dbs: DBs,
+    point_spreads: pointSpreadSelection,
+    survivor_pick: survivorPick,
+  };
+
+  const { error } = await supabase
+    .from("weekly_picks")
+    .upsert(
+      {
+        user_id: user.id,
+        username:
+          user.user_metadata?.username ||
+          user.email ||
+          "Unknown",
+        ...payload,
+      },
+      {
+        onConflict: "user_id,season,week",
+      }
+    );
+
+  if (error) {
+    console.error(
+      "Error saving international picks:",
+      error
+    );
+    setWarnMessages([
+      "Unable to save picks."
+    ]);
+    setWarnOpen(true);
+    return;
+  }
+
+  setSubmittedInternational(true);
+  setConfirmMsg(
+    "Your international game picks have been submitted."
+  );
+  setConfirmOpen(true);
+};
+
+const onSubmitSecond = async () => {
+  setWarnMessages([]);
+
+  const missing = games
+    .filter(isSecondSubmitGame)
+    .filter((g) => !selectedTeams[g.id]);
+
+  if (missing.length > 0) {
+    setWarnMessages([
+      "Please make all remaining picks before submitting."
+    ]);
+    setWarnOpen(true);
+    return;
+  }
 
     const messages = [];
 
@@ -979,11 +1069,23 @@ const DBToggle = (
                   )
                 );
 
+              const lastInternationalIndex =
+                Math.max(
+                  ...games.map(
+                    (g, idx) =>
+                      isInternationalGame(g)
+                        ? idx
+                        : -1
+                  )
+                );
+
               return games.map(
                 (game, idx) => {
                   const locked =
                     isFirstSubmitGame(game)
                       ? firstLocked
+                      : isInternationalGame(game)
+                      ? internationalLocked
                       : secondLocked;
 
                   return (
@@ -999,16 +1101,13 @@ const DBToggle = (
                         </td>
 
                         <td className="p-3">
-                          {game.displayDay !== game.day ? (
-                          <>
-                            {game.day}{" "}
-                            <span className="font-bold">
-                              Intl {game.location}
-                            </span>
-                          </>
-                        ) : (
-                          game.day
-                        )}
+                          {game.displayDay.startsWith("Sun Intl") ? (
+                            <>
+                              Sun <span className="font-bold">Intl {game.location}</span>
+                            </>
+                          ) : (
+                            game.displayDay
+                          )}
                         </td>
 
                         <td className="p-3">
@@ -1070,38 +1169,36 @@ const DBToggle = (
 
                         <td className="p-3">
                           <select
-  className={`border rounded p-1 w-full ${
-    selectedTeams[game.id]
-      ? "bg-yellow-200"
-      : ""
-  }`}
-  value={
-    selectedTeams[game.id] || ""
-  }
-  onChange={(e) =>
-    handleSelectChange(
-      game.id,
-      e.target.value,
-      game.dbTeam
-    )
-  }
-  disabled={
-    locked ||
-    (!isFirstSubmitGame(game) &&
-      secondSubmitLockedGames.includes(
-        String(game.id)
-      ))
-  }
-                          >
-                            <option value="">
-                              {!isFirstSubmitGame(
-                                game
-                              ) &&
+                            className={`border rounded p-1 w-full ${
+                              selectedTeams[game.id]
+                                ? "bg-yellow-200"
+                                : ""
+                            }`}
+                            value={
+                              selectedTeams[game.id] || ""
+                            }
+                            onChange={(e) =>
+                              handleSelectChange(
+                                game.id,
+                                e.target.value,
+                                game.dbTeam
+                              )
+                            }
+                            disabled={
+                            locked ||
+                            (isSecondSubmitGame(game) &&
                               secondSubmitLockedGames.includes(
                                 String(game.id)
-                              )
-                                ? "Game locked"
-                                : "-- Select Team --"}
+                              ))
+                          }
+                          >
+                            <option value="">
+                              {isSecondSubmitGame(game) &&
+                                secondSubmitLockedGames.includes(
+                                  String(game.id)
+                                )
+                                  ? "Game locked"
+                                  : "-- Select Team --"}
                             </option>
 
                             {game.teams.map(
@@ -1151,6 +1248,32 @@ const DBToggle = (
                           </td>
                         </tr>
                       )}
+
+                      {idx === lastInternationalIndex && (
+                        <tr>
+                          <td colSpan={5} className="p-3">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg bg-white border p-3">
+                              <span className="font-semibold">
+                                {timeInternational || "Kickoff time TBD"}
+                              </span>
+
+                              <button
+                                onClick={onSubmitInternational}
+                                disabled={internationalLocked}
+                                className={`px-4 py-2 rounded font-semibold text-white transition
+                                  ${
+                                    internationalLocked
+                                      ? "bg-gray-400 cursor-not-allowed"
+                                      : "bg-orange-500 hover:bg-orange-600 active:bg-orange-700"
+                                  }`}
+                              >
+                                Submit International Game
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
                     </React.Fragment>
                   );
                 }
@@ -1232,7 +1355,7 @@ const DBToggle = (
               </tr>
             )}
 
-            {games.length > 1 && (
+            {games.some(isSecondSubmitGame) && (
               <tr>
                 <td
                   colSpan={5}
@@ -1275,19 +1398,31 @@ const DBToggle = (
               const locked =
                 isFirstSubmitGame(game)
                   ? firstLocked
+                  : isInternationalGame(game)
+                  ? internationalLocked
                   : secondLocked;
 
               const lastFirstIndex =
-                Math.max(
-                  ...games.map(
-                    (g, i) =>
-                      isFirstSubmitGame(g)
-                        ? i
-                        : -1
-                  )
-                );
+  Math.max(
+    ...games.map(
+      (g, i) =>
+        isFirstSubmitGame(g)
+          ? i
+          : -1
+    )
+  );
 
-              return (
+    const lastInternationalIndex =
+      Math.max(
+        ...games.map(
+          (g, i) =>
+            isInternationalGame(g)
+              ? i
+              : -1
+        )
+      );
+
+    return (
                 <React.Fragment
                   key={game.id}
                 >
@@ -1298,16 +1433,13 @@ const DBToggle = (
                     </div>
 
                     <div>
-                      Day: {game.displayDay !== game.day ? (
-                      <>
-                        {game.day}{" "}
-                        <span className="font-bold">
-                          Intl {game.location}
-                        </span>
-                      </>
-                    ) : (
-                      game.day
-                    )}
+                      Day: {game.displayDay.startsWith("Sun Intl") ? (
+                        <>
+                          Day: Sun <span className="font-bold">Intl {game.location}</span>
+                        </>
+                      ) : (
+                        <>Day: {game.displayDay}</>
+                      )}
                     </div>
                     
 
@@ -1396,24 +1528,20 @@ const DBToggle = (
                         )
                       }
                       disabled={
-                        locked ||
-                        (!isFirstSubmitGame(
-                          game
-                        ) &&
-                          secondSubmitLockedGames.includes(
-                            String(game.id)
-                          ))
-                      }
-                    >
-                      <option value="">
-                        {!isFirstSubmitGame(
-                          game
-                        ) &&
+                      locked ||
+                      (isSecondSubmitGame(game) &&
                         secondSubmitLockedGames.includes(
                           String(game.id)
-                        )
-                          ? "Game locked"
-                          : "-- Select Team --"}
+                        ))
+                    }
+                    >
+                      <option value="">
+                        {isSecondSubmitGame(game) &&
+                          secondSubmitLockedGames.includes(
+                            String(game.id)
+                          )
+                            ? "Game locked"
+                            : "-- Select Team --"}
                       </option>
 
                       {game.teams.map(
@@ -1455,6 +1583,27 @@ const DBToggle = (
                       </button>
                     </div>
                   )}
+                                  {idx === lastInternationalIndex && (
+                    <div className="bg-white p-3 rounded shadow flex flex-col gap-3">
+                      <span className="font-semibold">
+                        {timeInternational || "Kickoff time TBD"}
+                      </span>
+
+                      <button
+                        onClick={onSubmitInternational}
+                        disabled={internationalLocked}
+                        className={`w-full px-4 py-2 rounded font-semibold text-white transition
+                          ${
+                            internationalLocked
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-orange-500 hover:bg-orange-600 active:bg-orange-700"
+                          }`}
+                      >
+                        Submit International Game
+                      </button>
+                    </div>
+                  )}
+
                 </React.Fragment>
               );
             }
@@ -1530,7 +1679,7 @@ const DBToggle = (
             </div>
           )}
 
-          {games.length > 1 && (
+          {games.some(isSecondSubmitGame) && (
             <div className="bg-white p-3 rounded shadow flex flex-col gap-3">
               <span className="font-semibold">
                 {timeSecond ||
@@ -1571,4 +1720,5 @@ const DBToggle = (
       />
     </div>
   );
+
 }
