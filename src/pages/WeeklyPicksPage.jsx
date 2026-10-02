@@ -759,16 +759,54 @@ const DBToggle = (
       setWarnOpen(true);
       return;
     }
+
+    const missingPointSpread = games
+      .filter(isFirstSubmitGame)
+      .filter(
+        (g) =>
+          g.pointSpread?.length > 0 &&
+          !pointSpreadSelection[g.id]
+      );
+
+    if (missingPointSpread.length > 0) {
+      setWarnMessages([
+        "Please select the Disruptor Point Spread before submitting."
+      ]);
+      setWarnOpen(true);
+      return;
+    }
     
 
-    const payload = {
-      season: activeSeason,
-      week: activeWeekNumber,
-      picks: selectedTeams,
-      dbs: DBs,
-      point_spreads: pointSpreadSelection,
-      survivor_pick: survivorPick,
-    };
+    const submittedGameIds = games
+  .filter(isFirstSubmitGame)
+  .map((g) => g.id);
+
+  const submittedPicks = Object.fromEntries(
+    submittedGameIds
+      .filter((id) => selectedTeams[id])
+      .map((id) => [id, selectedTeams[id]])
+  );
+
+  const submittedDBs = Object.fromEntries(
+    submittedGameIds
+      .filter((id) => DBs[id])
+      .map((id) => [id, DBs[id]])
+  );
+
+  const submittedPointSpreads = Object.fromEntries(
+    submittedGameIds
+      .filter((id) => pointSpreadSelection[id])
+      .map((id) => [id, pointSpreadSelection[id]])
+  );
+
+  const payload = {
+    season: activeSeason,
+    week: activeWeekNumber,
+    picks: submittedPicks,
+    dbs: submittedDBs,
+    point_spreads: submittedPointSpreads,
+    survivor_pick: survivorPick,
+  };
 
     const { error } = await supabase
       .from("weekly_picks")
@@ -833,12 +871,54 @@ const DBToggle = (
     return;
   }
 
+  const missingPointSpread = games
+    .filter(isInternationalGame)
+    .filter(
+      (g) =>
+        g.pointSpread?.length > 0 &&
+        !pointSpreadSelection[g.id]
+    );
+
+  if (missingPointSpread.length > 0) {
+    setWarnMessages([
+      "Please select the Disruptor Point Spread before submitting."
+    ]);
+    setWarnOpen(true);
+    return;
+  }
+
+  const submittedGameIds = games
+  .filter(
+    (g) =>
+      (submittedFirst && isFirstSubmitGame(g)) ||
+      isInternationalGame(g)
+  )
+  .map((g) => g.id);
+
+  const submittedPicks = Object.fromEntries(
+    submittedGameIds
+      .filter((id) => selectedTeams[id])
+      .map((id) => [id, selectedTeams[id]])
+  );
+
+  const submittedDBs = Object.fromEntries(
+    submittedGameIds
+      .filter((id) => DBs[id])
+      .map((id) => [id, DBs[id]])
+  );
+
+  const submittedPointSpreads = Object.fromEntries(
+    submittedGameIds
+      .filter((id) => pointSpreadSelection[id])
+      .map((id) => [id, pointSpreadSelection[id]])
+  );
+
   const payload = {
     season: activeSeason,
     week: activeWeekNumber,
-    picks: selectedTeams,
-    dbs: DBs,
-    point_spreads: pointSpreadSelection,
+    picks: submittedPicks,
+    dbs: submittedDBs,
+    point_spreads: submittedPointSpreads,
     survivor_pick: survivorPick,
   };
 
@@ -914,6 +994,22 @@ const onSubmitSecond = async () => {
     return;
   }
 
+  const missingPointSpread = games
+    .filter(isSecondSubmitGame)
+    .filter(
+      (g) =>
+        g.pointSpread?.length > 0 &&
+        !pointSpreadSelection[g.id]
+    );
+
+  if (missingPointSpread.length > 0) {
+    setWarnMessages([
+      "Please select the Disruptor Point Spread before submitting."
+    ]);
+    setWarnOpen(true);
+    return;
+  }
+
     const messages = [];
 
     const driveByOK = Object.keys(DBs).length > 0;
@@ -936,14 +1032,41 @@ const onSubmitSecond = async () => {
       return;
     }
 
-    const payload = {
-      season: activeSeason,
-      week: activeWeekNumber,
-      picks: selectedTeams,
-      dbs: DBs,
-      point_spreads: pointSpreadSelection,
-      survivor_pick: survivorPick,
-    };
+    const submittedGameIds = games
+  .filter(
+    (g) =>
+      (submittedFirst && isFirstSubmitGame(g)) ||
+      (submittedInternational && isInternationalGame(g)) ||
+      isSecondSubmitGame(g)
+  )
+  .map((g) => g.id);
+
+  const submittedPicks = Object.fromEntries(
+    submittedGameIds
+      .filter((id) => selectedTeams[id])
+      .map((id) => [id, selectedTeams[id]])
+  );
+
+  const submittedDBs = Object.fromEntries(
+    submittedGameIds
+      .filter((id) => DBs[id])
+      .map((id) => [id, DBs[id]])
+  );
+
+  const submittedPointSpreads = Object.fromEntries(
+    submittedGameIds
+      .filter((id) => pointSpreadSelection[id])
+      .map((id) => [id, pointSpreadSelection[id]])
+  );
+
+  const payload = {
+    season: activeSeason,
+    week: activeWeekNumber,
+    picks: submittedPicks,
+    dbs: submittedDBs,
+    point_spreads: submittedPointSpreads,
+    survivor_pick: survivorPick,
+  };
 
     const { error } = await supabase
       .from("weekly_picks")
@@ -1305,10 +1428,7 @@ const onSubmitSecond = async () => {
 
                               <button
                                 onClick={onSubmitInternational}
-                                disabled={
-                                  internationalLocked ||
-                                  !firstStageReady
-                                }
+                                disabled={internationalLocked}
                                 className={`px-4 py-2 rounded font-semibold text-white transition
                                   ${
                                     internationalLocked
@@ -1420,11 +1540,7 @@ const onSubmitSecond = async () => {
                       onClick={
                         onSubmitSecond
                       }
-                      disabled={
-                        secondLocked ||
-                        !firstStageReady ||
-                        !internationalStageReady
-                      }
+                      disabled={secondLocked}
                       className={`px-4 py-2 rounded font-semibold text-white transition
                         ${
                           secondLocked
@@ -1642,10 +1758,7 @@ const onSubmitSecond = async () => {
 
                       <button
                         onClick={onSubmitInternational}
-                        disabled={
-                          internationalLocked ||
-                          !firstStageReady
-                        }
+                        disabled={internationalLocked}
                         className={`w-full px-4 py-2 rounded font-semibold text-white transition
                           ${
                             internationalLocked
@@ -1744,11 +1857,7 @@ const onSubmitSecond = async () => {
                 onClick={
                   onSubmitSecond
                 }
-                disabled={
-                  secondLocked ||
-                  !firstStageReady ||
-                  !internationalStageReady
-                }
+                disabled={secondLocked}
                 className={`w-full px-4 py-2 rounded font-semibold text-white transition
                   ${
                     secondLocked
