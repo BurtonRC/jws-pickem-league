@@ -605,6 +605,18 @@ const cleanupSecond =
     submittedSecond ||
     timeSecond === "Kickoff reached!";
 
+  const firstStageReady =
+  submittedFirst ||
+  timeFirst === "Kickoff reached!";
+
+  const hasInternationalStage =
+    games.some(isInternationalGame);
+
+  const internationalStageReady =
+    !hasInternationalStage ||
+    submittedInternational ||
+    timeInternational === "Kickoff reached!";
+
 
   // ------------------------------
   // Handlers
@@ -797,17 +809,17 @@ const DBToggle = (
   const onSubmitInternational = async () => {
   setWarnMessages([]);
 
-    const missingFirst = games
-    .filter(isFirstSubmitGame)
-    .filter((g) => !selectedTeams[g.id]);
+    const firstStageReady =
+    submittedFirst ||
+    timeFirst === "Kickoff reached!";
 
-  if (missingFirst.length > 0) {
-    setWarnMessages([
-      "Please make your early game picks before submitting the International game."
-    ]);
-    setWarnOpen(true);
-    return;
-  }
+    if (!firstStageReady) {
+      setWarnMessages([
+        "Please submit your first game picks before submitting the International game."
+      ]);
+      setWarnOpen(true);
+      return;
+    }
 
   const missing = games
     .filter(isInternationalGame)
@@ -867,6 +879,28 @@ const DBToggle = (
 
 const onSubmitSecond = async () => {
   setWarnMessages([]);
+
+  const firstStageReady =
+  submittedFirst ||
+  timeFirst === "Kickoff reached!";
+
+  const hasInternationalStage =
+    games.some(isInternationalGame);
+
+  const internationalStageReady =
+    !hasInternationalStage ||
+    submittedInternational ||
+    timeInternational === "Kickoff reached!";
+
+  if (!firstStageReady || !internationalStageReady) {
+    setWarnMessages([
+      !firstStageReady
+        ? "Please submit your first game picks before submitting the remaining picks."
+        : "Please submit your International game picks before submitting the remaining picks."
+    ]);
+    setWarnOpen(true);
+    return;
+  }
 
   const missing = games
     .filter(isSecondSubmitGame)
@@ -1271,7 +1305,10 @@ const onSubmitSecond = async () => {
 
                               <button
                                 onClick={onSubmitInternational}
-                                disabled={internationalLocked}
+                                disabled={
+                                  internationalLocked ||
+                                  !firstStageReady
+                                }
                                 className={`px-4 py-2 rounded font-semibold text-white transition
                                   ${
                                     internationalLocked
@@ -1384,7 +1421,9 @@ const onSubmitSecond = async () => {
                         onSubmitSecond
                       }
                       disabled={
-                        secondLocked
+                        secondLocked ||
+                        !firstStageReady ||
+                        !internationalStageReady
                       }
                       className={`px-4 py-2 rounded font-semibold text-white transition
                         ${
@@ -1415,24 +1454,24 @@ const onSubmitSecond = async () => {
                   : secondLocked;
 
               const lastFirstIndex =
-  Math.max(
-    ...games.map(
-      (g, i) =>
-        isFirstSubmitGame(g)
-          ? i
-          : -1
-    )
-  );
+              Math.max(
+                ...games.map(
+                  (g, i) =>
+                    isFirstSubmitGame(g)
+                      ? i
+                      : -1
+                )
+              );
 
-    const lastInternationalIndex =
-      Math.max(
-        ...games.map(
-          (g, i) =>
-            isInternationalGame(g)
-              ? i
-              : -1
-        )
-      );
+                const lastInternationalIndex =
+                  Math.max(
+                    ...games.map(
+                      (g, i) =>
+                        isInternationalGame(g)
+                          ? i
+                          : -1
+                    )
+                  );
 
     return (
                 <React.Fragment
@@ -1469,7 +1508,7 @@ const onSubmitSecond = async () => {
                     )}
 
                     {game.pointSpread?.length > 0 && (
-  <>
+                    <>
                     <div className="text-sm font-semibold mt-2">
                       Disruptor Point Spread
                     </div>
@@ -1603,7 +1642,10 @@ const onSubmitSecond = async () => {
 
                       <button
                         onClick={onSubmitInternational}
-                        disabled={internationalLocked}
+                        disabled={
+                          internationalLocked ||
+                          !firstStageReady
+                        }
                         className={`w-full px-4 py-2 rounded font-semibold text-white transition
                           ${
                             internationalLocked
@@ -1703,7 +1745,9 @@ const onSubmitSecond = async () => {
                   onSubmitSecond
                 }
                 disabled={
-                  secondLocked
+                  secondLocked ||
+                  !firstStageReady ||
+                  !internationalStageReady
                 }
                 className={`w-full px-4 py-2 rounded font-semibold text-white transition
                   ${
