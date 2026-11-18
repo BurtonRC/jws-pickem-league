@@ -109,7 +109,7 @@ export default function HomePage({ user }) {
             <main className="w-full max-w-[100%] lg:max-w-[1024px] mx-auto px-[12px] lg:px-[40px] space-y-8">
               <section className="w-full overflow-hidden rounded-2xl shadow">
                 <img
-                  src="/images/jwpl-hero-stadium.jpg"
+                  src="/images/jwpl-hero-stadium-radar.jpg"
                   alt="Football stadium"
                   className="block h-auto w-full"
                 />

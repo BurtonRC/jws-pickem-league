@@ -2885,52 +2885,24 @@ export default function LeagueRadarPage() {
         </PageHeader>
 
         {!loading && !error && (
-          <div className="mb-5 mt-2 flex items-center justify-center gap-1 text-sm text-gray-500 lg:justify-start">
-  <div>Season {season} &nbsp;</div>
+          <div className="mb-5 mt-2 flex items-center justify-center gap-2 text-sm text-gray-500 lg:justify-start">
+            <span>Season {season}</span>
 
-  <div className="flex items-center">
-    <button
-      type="button"
-      aria-label="Previous week"
-      disabled={availableWeeks.indexOf(week) <= 0 || loading}
-      onClick={() =>
-        loadRadarWeek(
-          availableWeeks[availableWeeks.indexOf(week) - 1]
-        )
-      }
-      className="flex h-4 w-5 items-center justify-center rounded-md border border-gray-400 text-lg font-semibold text-gray-600 hover:border-gray-500 hover:text-gray-900 disabled:opacity-30"
-    >
-      <span className="-translate-y-px">‹</span>
-    </button>
-
-    <span className="px-2 font-medium text-gray-600">
-      Week {week}
-    </span>
-
-    <button
-      type="button"
-      aria-label="Next week"
-      disabled={
-        availableWeeks.indexOf(week) === availableWeeks.length - 1 ||
-        loading
-      }
-      onClick={() =>
-        loadRadarWeek(
-          availableWeeks[availableWeeks.indexOf(week) + 1]
-        )
-      }
-      className="flex h-4 w-5 items-center justify-center rounded-md border border-gray-400 text-lg font-semibold text-gray-600 hover:border-gray-500 hover:text-gray-900 disabled:opacity-30"
-    >
-      <span className="-translate-y-px">›</span>
-    </button>
-
-      <span className="ml-4 text-sm font-bold text-gray-500">
-  ← Click arrows to change week no.
-</span>
-
-  </div>
-</div>
-                    )}
+            <select
+              aria-label="Select week"
+              value={week ?? ""}
+              onChange={(event) => loadRadarWeek(Number(event.target.value))}
+              disabled={loading || availableWeeks.length === 0}
+              className="h-8 min-w-[76px] rounded-md border border-gray-300 bg-white px-2 font-medium text-gray-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-50"
+            >
+              {availableWeeks.map((availableWeek) => (
+                <option key={availableWeek} value={availableWeek}>
+                  Week {availableWeek}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* ERROR */}
         {error && (
